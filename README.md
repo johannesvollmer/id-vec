@@ -10,7 +10,7 @@ The `Vec<T>` will reuse deleted slots.
 # Usage
 
 ```
-let words = IdMap::new();
+let mut words = IdMap::new();
 let id_hello = words.insert("hello");
 let id_world = words.insert("world");
 
