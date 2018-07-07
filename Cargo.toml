@@ -1,5 +1,5 @@
 [package]
-name = "IdMap"
+name = "id_map"
 version = "0.1.0"
 authors = ["johannesvollmer <johannes.boenki@t-online.de>"]
 
