@@ -11,10 +11,11 @@ The `Vec<T>` will reuse deleted slots.
 
 ```
 let mut words = IdMap::new();
+
 let id_hello = words.insert("hello");
 let id_world = words.insert("world");
 
-println!("{:?} -> {}", id_hello, words.get(id_hello));
+println!("{:?} -> {:?}", id_hello, words.get(id_hello));
 
 ```
 
