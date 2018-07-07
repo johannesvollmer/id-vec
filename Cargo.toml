@@ -4,3 +4,4 @@ version = "0.1.0"
 authors = ["johannesvollmer <johannes.boenki@t-online.de>"]
 
 [dependencies]
+# num-traits = "0.2"
