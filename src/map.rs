@@ -1,7 +1,6 @@
 
 use ::std::collections::HashMap;
 use ::std::collections::HashSet;
-
 use ::id::*;
 
 
@@ -22,6 +21,7 @@ pub struct IdMap<T> {
 
 
 impl<T> IdMap<T> {
+    /// does not allocate heap memory
     pub fn new() -> Self {
         Self::with_capacity(0)
     }
@@ -33,15 +33,18 @@ impl<T> IdMap<T> {
         }
     }
 
+    /// Excludes deleted elements
     pub fn contains(&self, element: Id<T>) -> bool {
         element.index_value() < self.elements.len()
             && self.id_is_currently_used(element)
     }
 
+    /// Returns if this vector contains deleted elements
     pub fn is_packed(&self) -> bool {
         self.currently_unused_ids.is_empty()
     }
 
+    /// Retrns if this id is not deleted
     fn id_is_currently_used(&self, element: Id<T>) -> bool {
         !self.currently_unused_ids.contains(&element.index_value())
     }
@@ -63,15 +66,15 @@ impl<T> IdMap<T> {
 
 
     /// enable the specified id to be reused
-    /// (does not directly deallocate the element, but will be overwritten later)
-    /// there should not exist any ids pointing to that element after this call, because this id may be reused
+    /// (does not directly deallocate the element, but will possibly be overwritten later)
+    /// there should not exist any ids pointing to that element after this call, because this id is not valid anymore
     pub fn mark_unused(&mut self, element: Id<T>) {
         self.debug_assert_id_is_in_use(element, true);
         self.currently_unused_ids.insert(element.index_value());
     }
 
-    /// associate the specified element with a currently unused id
-    /// (may overwrite (thus drop) unused contents)
+    /// associate the specified element with a currently unused id.
+    /// may overwrite (thus drop) unused contents
     pub fn insert(&mut self, element: T) -> Id<T> {
         Id::from_index({
             if let Some(previously_unused_index) = self.currently_unused_ids.iter().next().map(|i| *i) {
@@ -86,12 +89,14 @@ impl<T> IdMap<T> {
         })
     }
 
+    /// return a reference to the element that this id points to
     pub fn get(&self, element: Id<T>) -> Option<&T> {
         if self.id_is_currently_used(element) {
             self.elements.get(element.index_value())
         } else { None }
     }
 
+    /// return a mutable reference to the element that this id points to
     pub fn get_mut<'s>(&'s mut self, element: Id<T>) -> Option<&'s mut T> {
         if self.id_is_currently_used(element) {
             self.elements.get_mut(element.index_value())
@@ -106,6 +111,8 @@ impl<T> IdMap<T> {
             storage: self
         }
     }
+
+    // TODO iter_mut
 
     /// used for immutable direct access to all used elements
     pub fn elements<'s>(&'s self) -> ElementIter<'s, T> {
@@ -134,6 +141,7 @@ impl<T> IdMap<T> {
 
     /// returns a (map[old_id] -> new_id) for the caller to correct any ids that may have changed
     // TODO test
+    // #[must_use]
     pub fn packed_vec<'s>(&'s self) -> (Vec<&'s T>, HashMap<Id<T>, Index>) {
         let mut remap = HashMap::new();
         let mut vec = Vec::with_capacity(self.len());
