@@ -34,7 +34,7 @@ impl<T> IdMap<T> {
     }
 
     pub fn contains(&self, element: Id<T>) -> bool {
-        element.index < self.elements.len()
+        element.index_value() < self.elements.len()
             && self.id_is_currently_used(element)
     }
 
@@ -43,12 +43,12 @@ impl<T> IdMap<T> {
     }
 
     fn id_is_currently_used(&self, element: Id<T>) -> bool {
-        !self.currently_unused_ids.contains(&element.index)
+        !self.currently_unused_ids.contains(&element.index_value())
     }
 
     fn id_is_currently_valid(&self, element: Id<T>) -> bool {
         self.id_is_currently_used(element)
-            && element.index < self.elements.len()
+            && element.index_value() < self.elements.len()
     }
 
     #[inline(always)]
@@ -67,7 +67,7 @@ impl<T> IdMap<T> {
     /// there should not exist any ids pointing to that element after this call, because this id may be reused
     pub fn mark_unused(&mut self, element: Id<T>) {
         self.debug_assert_id_is_in_use(element, true);
-        self.currently_unused_ids.insert(element.index);
+        self.currently_unused_ids.insert(element.index_value());
     }
 
     /// associate the specified element with a currently unused id
@@ -88,13 +88,13 @@ impl<T> IdMap<T> {
 
     pub fn get(&self, element: Id<T>) -> Option<&T> {
         if self.id_is_currently_used(element) {
-            self.elements.get(element.index)
+            self.elements.get(element.index_value())
         } else { None }
     }
 
     pub fn get_mut<'s>(&'s mut self, element: Id<T>) -> Option<&'s mut T> {
         if self.id_is_currently_used(element) {
-            self.elements.get_mut(element.index)
+            self.elements.get_mut(element.index_value())
         } else { None }
     }
 
@@ -353,13 +353,13 @@ impl<T> ::std::ops::Index<Id<T>> for IdMap<T> {
     type Output = T;
     fn index(&self, element: Id<T>) -> &T {
         self.debug_assert_id_is_valid(element, true);
-        &self.elements[element.index]
+        &self.elements[element.index_value()]
     }
 }
 
 impl<T> ::std::ops::IndexMut<Id<T>> for IdMap<T> {
     fn index_mut(&mut self, element: Id<T>) -> &mut T {
         self.debug_assert_id_is_valid(element, true);
-        &mut self.elements[element.index]
+        &mut self.elements[element.index_value()]
     }
 }

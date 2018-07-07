@@ -54,6 +54,6 @@ impl<T> ::std::hash::Hash for Id<T> {
 }
 impl<T> ::std::fmt::Debug for Id<T> {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
-        write!(f, "Id {:?}", self.index)
+        write!(f, "#{:?}", self.index)
     }
 }
