@@ -38,6 +38,9 @@ This however requires all operations on Nodes to access the vector,
 which could feel quite un-ergonomic.
 
 
+__This library provides a container built specifically for that use case of
+connected graph nodes.__
+
 
 ## Give me more information
 
