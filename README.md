@@ -7,6 +7,10 @@ The IdMap behaves similar to a `Map<Id, T>`, but automatically creates Ids.
 Internally, a `Vec<T>` is used, and `Id`s are just indices. 
 The `Vec<T>` will reuse deleted slots. 
 
+The goal of this specific library is being very minimal.
+As a consequence, the user must take care to not use ids that have been deleted.
+
+
 ## Usage
 
 ```
