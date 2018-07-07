@@ -139,6 +139,10 @@ impl<T> IdMap<T> {
         self.elements.len() - self.currently_unused_ids.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// returns a (map[old_id] -> new_id) for the caller to correct any ids that may have changed
     // TODO test
     // #[must_use]
@@ -369,5 +373,69 @@ impl<T> ::std::ops::IndexMut<Id<T>> for IdMap<T> {
     fn index_mut(&mut self, element: Id<T>) -> &mut T {
         self.debug_assert_id_is_valid(element, true);
         &mut self.elements[element.index_value()]
+    }
+}
+
+
+
+
+
+
+
+
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+
+    #[test]
+    pub fn test_single_element(){
+        let mut map = IdMap::new();
+
+        let id_0 = map.insert(0); {
+            assert_eq!(map.len(), 1, "map length after inserting");
+            assert!(!map.is_empty(), "map emptiness after inserting");
+            assert_eq!(map.get(id_0), Some(&0), "indexing `Some` after inserting ");
+        }
+
+        map.mark_unused(id_0); {
+            assert_eq!(map.get(id_0), None, "indexing `None` after deleting");
+            assert_eq!(map.len(), 0, "map length after deleting");
+            assert!(map.is_empty(), "map emptiness after deleting");
+        }
+
+        let id_1 = map.insert(1); {
+            assert_eq!(map.get(id_1), Some(&1), "indexing `Some` after inserting into deleted slot");
+            assert_eq!(map.get(id_0), Some(&1), "reusing unused id (old id pointing to new element)");
+            assert_eq!(map.len(), 1, "map length after inserting into deleted slot");
+            assert!(!map.is_empty(), "map emptiness after inserting into deleted slot");
+        }
+    }
+    #[test]
+    pub fn test_multiple_elements(){
+        let mut map = IdMap::new();
+        let len = 42;
+
+        for i in 0..42 {
+            assert!(!map.id_is_currently_valid(Id::from_index(i)), "unused it being invalid");
+            let id = map.insert(i);
+            assert!(map.id_is_currently_valid(id), "used id being valid");
+        }
+
+        assert_eq!(map.len(), len, "map length after inserting multiple elements");
+
+        while let Some(remaining_id) = map.ids().next() {
+            assert!(map.id_is_currently_valid(remaining_id), "used id being valid");
+            map.mark_unused(remaining_id);
+            assert!(!map.id_is_currently_valid(remaining_id), "unused it being invalid");
+        }
+    }
+
+
+    #[test]
+    pub fn test_iterators(){
+        // TODO
     }
 }

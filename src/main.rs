@@ -11,7 +11,7 @@ fn main() {
     let mut words = IdMap::new();
 
     let id_hello = words.insert("hello");
-    let id_world = words.insert("world");
+    let _id_world = words.insert("world");
 
     println!("{:?} -> {:?}", id_hello, words.get(id_hello));
 

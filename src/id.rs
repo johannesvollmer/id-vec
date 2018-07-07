@@ -21,6 +21,8 @@ impl<T> Id<T> {
         &vec[self]
     }
 
+    /// convienience function which allows writing the index first, and the storage afterwards
+    /// example: the_selected_entity.of(entities);
     pub fn of_mut<'s>(self, vec: &'s mut IdMap<T>) -> &'s mut T {
         &mut vec[self]
     }
@@ -55,5 +57,24 @@ impl<T> ::std::hash::Hash for Id<T> {
 impl<T> ::std::fmt::Debug for Id<T> {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
         write!(f, "#{:?}", self.index)
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    pub fn internal_index(){
+        for index in 0..32 {
+            let id : Id<f32> = Id::from_index(index);
+            let eq_id : Id<f32> = Id::from_index(index);
+            let non_eq_id : Id<f32> = Id::from_index(index + 1);
+
+            assert_eq!(id, eq_id);
+            assert_ne!(id, non_eq_id);
+            assert_eq!(id.index_value(), index);
+        }
     }
 }
