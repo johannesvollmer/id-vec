@@ -23,9 +23,9 @@ println!("{:?} -> {:?}", id_hello, words.get(id_hello));
 
 ```
 
-## Do I need that?
+## Motivation 
 
-In Rust, Graphs can be a difficult architecture, 
+In Rust, Graphs can be quite a difficult architecture, 
 because a straightforward `&'a T` would prevent any mutation of the graph. 
 Using a `Ref<Cell<T>>` is considered un-idiomatic 
 because it circumvents Rusts safety mechanisms.
@@ -35,12 +35,19 @@ indices, and store all nodes of a graph in a vector.
 Each node would store the indices of their connected nodes, 
 instead of a direct reference to them.
 This however requires all operations on Nodes to access the vector, 
-which could feel quite un-ergonomic.
+which could feel quite unergonomic. Nevertheless, this
+approach appears the most idiomatic and safe to me. 
+
+This library aims to simplify the index-based approach by
+introducing ids, which are essentially type-safe indices.
+The safety is achieved by allowing only `Id<T>`s 
+and not any unsigned number as index for a vector. 
 
 
 
-## Give me more information
+## Architecture
 
 This project has two core structs: the map itself, and the id. 
-The id is just a newtype wrapping and index, but is has a type parameter
-to improve type safety for indices.
+The id is just a newtype wrapping and index, but it has a type parameter
+to improve type safety for indices. The map internally is a vector, 
+but it reuses deleted slots. 
