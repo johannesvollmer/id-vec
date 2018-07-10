@@ -2,22 +2,27 @@
 
 # IdMap
 
-The IdMap behaves similar to a `Map<Id, T>`, but automatically creates Ids. 
+You can think of the IdMap as a vector that 
+reuses slots. It inserts new elements into 
+places where old elements were removed, 
+instead of shifting all the remaining elements by one. 
+This allows using indices to refer to elements, which
+remain valid even after removing other elements from the vector. 
 
-Internally, a `Vec<T>` is used, and `Id`s are just indices. 
-The `Vec<T>` will reuse deleted slots. 
+The goal of this specific library is being very minimal, 
+both in resource usage and API complexity. 
+As a consequence, it does not have a runtime system to detect the incorrect use of deleted ids. 
+The user must take care to not use ids that have been deleted. 
 
-The goal of this specific library is being very minimal.
-As a consequence, the user must take care to not use ids that have been deleted.
 
 
 ## Usage
 
-```
+```rust
 let mut words = IdMap::new();
 
-let id_hello = words.insert("hello");
-let id_world = words.insert("world");
+let id_hello: Id<&str> = words.insert("hello");
+let id_world: Id<&str> = words.insert("world");
 
 println!("{:?} -> {:?}", id_hello, words.get(id_hello));
 
@@ -50,4 +55,6 @@ and not any unsigned number as index for a vector.
 This project has two core structs: the map itself, and the id. 
 The id is just a newtype wrapping and index, but it has a type parameter
 to improve type safety for indices. The map internally is a vector, 
-but it reuses deleted slots. 
+but it reuses deleted slots. It does so by storing the indices 
+of deleted elements in a hash set, which is fast for insertion of new elements 
+but may be not as fast as BitVec for indexing. 
