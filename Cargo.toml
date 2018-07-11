@@ -10,5 +10,19 @@ categories = ["data-structures", "memory-management", "rust-patterns"]
 license = "MIT"
 maintenance = { status = "passively-maintained" }
 
+[lib]
+path = "src/lib.rs"
+test = true
+doctest = false # TODO
+bench = false
+doc = true
+plugin = false
+proc-macro = false
+
+# If set to false, `cargo test` will omit the `--test` flag to rustc, which
+# stops it from generating a test harness. This is useful when the binary being
+# built manages the test runner itself.
+harness = true
+
 [dependencies]
 # num-traits = "0.2"
