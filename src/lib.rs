@@ -16,7 +16,7 @@ fn example() {
     let _id_world = words.insert("world");
 
     println!("{:?} -> {:?}", id_hello, words.get(id_hello));
-    assert_eq!(words.get(id_hello), Some("hello"));
+    assert_eq!(words.get(id_hello), Some(&"hello"));
 
     words.mark_unused(id_hello);
     assert_eq!(words.get(id_hello), None);
