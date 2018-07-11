@@ -29,6 +29,15 @@ both in resource usage and API complexity.
 As a consequence, it does not have a runtime system to detect the incorrect use of deleted ids. 
 The user must take care to not use ids that have been deleted. 
 
+## Including this library
+
+To add this library to your project, 
+simply add this line to your `Cargo.toml` dependencies:
+
+```toml
+[dependencies]
+id-map = { git = "https://github.com/johannesvollmer/id-map" }
+```
 
 ## Motivation 
 
