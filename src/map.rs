@@ -112,7 +112,8 @@ impl<T> IdMap<T> {
         }
     }
 
-    // TODO iter_mut
+    // pub fn iter_mut<'s>(&'s mut self) -> IterMut cannot be implemented safely
+    // because it would require multiple mutable references
 
     /// used for immutable direct access to all used elements
     pub fn elements<'s>(&'s self) -> ElementIter<'s, T> {
@@ -124,10 +125,13 @@ impl<T> IdMap<T> {
         IdIter { iter: self.iter() }
     }
 
-    /// used for mutable access
-    /// may be more expensive than `iter` because it needs to clone the internal set of unused ids in order to unborrow &self
-    pub fn ids_mut(&self) -> IdIterMut<T> {
-        IdIterMut {
+    /// used for full mutable access, allows inserting and deleting while iterating.
+    /// will keep an independent state in order to be used while modifying the map.
+    /// this may be more expensive than `iter`
+    /// because it needs to clone the internal set of unused ids
+    /// in order to unborrow &self
+    pub fn get_ids(&self) -> OwnedIdIter<T> {
+        OwnedIdIter {
             inclusive_front_index: 0,
             exclusive_back_index: self.elements.len(),
             unused_ids: self.currently_unused_ids.clone(), // TODO without clone // TODO try copy-on-write?
@@ -178,6 +182,22 @@ impl<T> IdMap<T> {
 
 }
 
+
+
+impl<T> ::std::ops::Index<Id<T>> for IdMap<T> {
+    type Output = T;
+    fn index(&self, element: Id<T>) -> &T {
+        self.debug_assert_id_is_valid(element, true);
+        &self.elements[element.index_value()]
+    }
+}
+
+impl<T> ::std::ops::IndexMut<Id<T>> for IdMap<T> {
+    fn index_mut(&mut self, element: Id<T>) -> &mut T {
+        self.debug_assert_id_is_valid(element, true);
+        &mut self.elements[element.index_value()]
+    }
+}
 
 
 
@@ -234,7 +254,7 @@ pub struct Iter<'s, T: 's> {
 impl<'s, T: 's> Iterator for Iter<'s, T> {
     type Item = (Id<T>, &'s T);
 
-    fn next(&mut self) -> Option<<Self as Iterator>::Item> {
+    fn next(&mut self) -> Option<Self::Item> {
         iter_next(
             &mut self.inclusive_front_index,
             &mut self.exclusive_back_index,
@@ -254,7 +274,7 @@ impl<'s, T: 's> Iterator for Iter<'s, T> {
 }
 
 impl<'s, T: 's> DoubleEndedIterator for Iter<'s, T> {
-    fn next_back(&mut self) -> Option<<Self as Iterator>::Item> {
+    fn next_back(&mut self) -> Option<Self::Item> {
         iter_next_back(
             &mut self.inclusive_front_index,
             &mut self.exclusive_back_index,
@@ -265,8 +285,6 @@ impl<'s, T: 's> DoubleEndedIterator for Iter<'s, T> {
         })
     }
 }
-
-
 
 pub struct ElementIter<'s, T: 's> {
     iter: Iter<'s, T>,
@@ -319,14 +337,14 @@ impl<'s, T: 's> DoubleEndedIterator for IdIter<'s, T> {
 
 
 
-pub struct IdIterMut<T> {
+pub struct OwnedIdIter<T> {
     inclusive_front_index: Index,
     exclusive_back_index: Index,
     unused_ids: HashSet<Index>,
     marker: ::std::marker::PhantomData<T>,
 }
 
-impl<T> Iterator for IdIterMut<T> {
+impl<T> Iterator for OwnedIdIter<T> {
     type Item = Id<T>;
 
     fn next(&mut self) -> Option<Id<T>> {
@@ -347,7 +365,7 @@ impl<T> Iterator for IdIterMut<T> {
     }
 }
 
-impl<T> DoubleEndedIterator for IdIterMut<T> {
+impl<T> DoubleEndedIterator for OwnedIdIter<T> {
     fn next_back(&mut self) -> Option<<Self as Iterator>::Item> {
         iter_next_back(
             &mut self.inclusive_front_index,
@@ -361,20 +379,6 @@ impl<T> DoubleEndedIterator for IdIterMut<T> {
 
 
 
-impl<T> ::std::ops::Index<Id<T>> for IdMap<T> {
-    type Output = T;
-    fn index(&self, element: Id<T>) -> &T {
-        self.debug_assert_id_is_valid(element, true);
-        &self.elements[element.index_value()]
-    }
-}
-
-impl<T> ::std::ops::IndexMut<Id<T>> for IdMap<T> {
-    fn index_mut(&mut self, element: Id<T>) -> &mut T {
-        self.debug_assert_id_is_valid(element, true);
-        &mut self.elements[element.index_value()]
-    }
-}
 
 
 
