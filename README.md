@@ -1,19 +1,7 @@
-
-
 # IdMap
 
-You can think of the IdMap as a vector that 
-reuses slots. It inserts new elements into 
-places where old elements were removed, 
-instead of shifting all the remaining elements by one. 
-This allows using indices to refer to elements, which
-remain valid even after removing other elements from the vector. 
-
-The goal of this specific library is being very minimal, 
-both in resource usage and API complexity. 
-As a consequence, it does not have a runtime system to detect the incorrect use of deleted ids. 
-The user must take care to not use ids that have been deleted. 
-
+Inserting elements into this map yields a persistent, 
+type-safe Index to that new element.
 
 
 ## Usage
@@ -27,6 +15,20 @@ let id_world: Id<&str> = words.insert("world");
 println!("{:?} -> {:?}", id_hello, words.get(id_hello));
 
 ```
+
+
+You can think of the IdMap as a vector that 
+reuses slots. It inserts new elements into 
+places where old elements were removed, 
+instead of shifting all the remaining elements by one. 
+This allows using indices to refer to elements, which
+remain valid even after removing other elements from the vector. 
+
+The goal of this specific library is being very minimal, 
+both in resource usage and API complexity. 
+As a consequence, it does not have a runtime system to detect the incorrect use of deleted ids. 
+The user must take care to not use ids that have been deleted. 
+
 
 ## Motivation 
 
