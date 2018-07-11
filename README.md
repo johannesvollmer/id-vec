@@ -72,3 +72,12 @@ to improve type safety for indices. The map internally is a vector,
 but it reuses deleted slots. It does so by storing the indices 
 of deleted elements in a hash set, which is fast for insertion of new elements 
 but may be not as fast as BitVec for indexing. 
+
+
+## Other interesing crates
+
+-   __[Froggy](https://github.com/kvark/froggy): Component-Graph-System__
+
+    Also contains a similar datastructure, utilizing Ids, 
+    but does more runtime checks using `Rc<T>` and `Weak<T>`, 
+    which I wanted to avoid.
