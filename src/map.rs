@@ -41,28 +41,16 @@ impl<T> IdMap<T> {
     /// Create a map containing these elements.
     /// Directly uses the specified vector,
     /// so no allocation is made calling this function.
-    pub fn from_vec(vec: Vec<T>) -> Self {
+    pub fn from_vec(elements: Vec<T>) -> Self {
         IdMap {
             unused_indices: HashSet::new(), // no elements deleted
-            elements: vec,
+            elements,
         }
     }
 
 
-    /// Excludes deleted elements, and indices out of range
-    fn contains(&self, element: Id<T>) -> bool {
-        self.index_is_in_range(element.index_value())
-          && self.index_is_currently_used(element.index_value())
-    }
 
-    /// Returns if this vector contains any deleted elements
-    pub fn is_packed(&self) -> bool {
-        self.unused_indices.is_empty()
-    }
-
-
-
-    /// Returns if this id is not deleted
+    /// Returns if this id is not deleted (does not check if index is inside vector range)
     fn index_is_currently_used(&self, index: Index) -> bool {
         index + 1 == self.elements.len() || // last element is always used
             !self.unused_indices.contains(&index)
@@ -74,18 +62,46 @@ impl<T> IdMap<T> {
 
     #[inline(always)]
     fn debug_assert_id_validity(&self, element: Id<T>, validity: bool){
-        debug_assert_eq!(self.contains(element), validity);
+        debug_assert_eq!(self.contains_id(element), validity);
     }
     
     #[inline(always)]
     fn debug_assert_last_element_is_used(&self){
         if !self.is_empty() {
             debug_assert!(
-                self.contains(Id::from_index(self.elements.len() - 1)),
+                self.contains_id(Id::from_index(self.elements.len() - 1)),
                 "IdMap has invalid state: Last element is unused."
             );
         }
     }
+
+
+
+    pub fn len(&self) -> usize {
+        debug_assert!(self.elements.len() >= self.unused_indices.len(), "More ids are not used than exist");
+        self.elements.len() - self.unused_indices.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Excludes deleted elements, and indices out of range
+    pub fn contains_id(&self, element: Id<T>) -> bool {
+        self.index_is_in_range(element.index_value())
+            && self.index_is_currently_used(element.index_value())
+    }
+
+    /// Excludes deleted elements, and indices out of range
+    pub fn contains_element(&self, element: &T) -> bool where T: Eq {
+        self.elements.contains(element)
+    }
+
+    /// Returns if this vector contains any deleted elements
+    pub fn is_packed(&self) -> bool {
+        self.unused_indices.is_empty()
+    }
+
 
 
     /// Enable the specified id to be overwritten when a new element is inserted.
@@ -115,10 +131,17 @@ impl<T> IdMap<T> {
         self.debug_assert_last_element_is_used();
     }
 
-    /// Removes all elements, instantly deallocating
-    fn clear(&mut self){
-        self.elements.clear();
-        self.unused_indices.clear();
+    /// Removes an element from this map (the one element which is the least work to remove)
+    /// may deallocate unused elements
+    // TODO test
+    pub fn pop(&mut self) -> Option<T> {
+        self.debug_assert_last_element_is_used();
+
+        let popped = self.elements.pop();
+        self.pop_back_unused();
+
+        self.debug_assert_last_element_is_used();
+        popped
     }
 
     /// Recover from possibly invalid state
@@ -156,6 +179,8 @@ impl<T> IdMap<T> {
         id
     }
 
+
+
     /// Return a reference to the element that this id points to
     pub fn get(&self, element: Id<T>) -> Option<&T> {
         if self.index_is_currently_used(element.index_value()) {
@@ -170,6 +195,16 @@ impl<T> IdMap<T> {
         } else { None }
     }
 
+
+
+
+    /// Removes all elements, instantly deallocating
+    pub fn clear(&mut self){
+        self.elements.clear();
+        self.unused_indices.clear();
+        debug_assert!(self.is_empty());
+    }
+
     /// removes unused elements at the end of the internal vector
     /// and shrinks the internal vector itself
     /// may deallocate unused elements
@@ -180,18 +215,32 @@ impl<T> IdMap<T> {
         self.debug_assert_last_element_is_used();
     }
 
-    /// Removes an element from this map (the one element which is the least work to remove)
-    /// may deallocate unused elements
-    // TODO test
-    pub fn pop(&mut self) -> Option<T> {
-        self.debug_assert_last_element_is_used();
+    /// Make this map have a continuous flow of indices, having no wasted allocation
+    /// and calling remap(old_id, new_id) for every element that has been moved to a new Id
+    // #[must_use]
+    pub fn pack<F>(&mut self, remap: F) where F: Fn(&mut Self, Id<T>, Id<T>) {
+        let unused_indices = ::std::mem::replace(
+            &mut self.unused_indices,
+            HashSet::new() // does not allocate
+        );
 
-        let popped = self.elements.pop();
-        self.pop_back_unused();
+        for unused_index in unused_indices.into_iter() {
+            // unused_index may have already been removed in a previous iteration, so check
+            if self.index_is_in_range(unused_index){
+                self.debug_assert_last_element_is_used();
+                let last_used_element_index = self.elements.len() - 1;
 
-        self.debug_assert_last_element_is_used();
-        popped
+                self.elements.swap(last_used_element_index, unused_index);
+                self.elements.pop(); // pop the (last & unused) element
+                self.pop_back_unused(); // pop not-anymore-guarded unused elements
+
+                remap(self, Id::from_index(last_used_element_index), Id::from_index(unused_index));
+            }
+        }
+
+        self.shrink_to_fit();
     }
+
 
 
 
@@ -238,40 +287,6 @@ impl<T> IdMap<T> {
         }
     }
 
-    pub fn len(&self) -> usize {
-        debug_assert!(self.elements.len() >= self.unused_indices.len(), "More ids are not used than exist");
-        self.elements.len() - self.unused_indices.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    /// Make this map have a continuous flow of indices, having no wasted allocation
-    /// and calling remap(old_id, new_id) for every element that has been moved to a new Id
-    // #[must_use]
-    pub fn pack<F>(&mut self, remap: F) where F: Fn(&mut Self, Id<T>, Id<T>) {
-        let unused_indices = ::std::mem::replace(
-            &mut self.unused_indices,
-            HashSet::new() // does not allocate
-        );
-
-        for unused_index in unused_indices.into_iter() {
-            // unused_index may have already been removed in a previous iteration, so check
-            if self.index_is_in_range(unused_index){
-                self.debug_assert_last_element_is_used();
-                let last_used_element_index = self.elements.len() - 1;
-
-                self.elements.swap(last_used_element_index, unused_index);
-                self.elements.pop(); // pop the (last & unused) element
-                self.pop_back_unused(); // pop not-anymore-guarded unused elements
-
-                remap(self, Id::from_index(last_used_element_index), Id::from_index(unused_index));
-            }
-        }
-
-        self.shrink_to_fit();
-    }
 
 }
 
@@ -629,17 +644,17 @@ mod test {
         let len = 42;
 
         for i in 0..42 {
-            assert!(!map.contains(Id::from_index(i)), "unused it being invalid");
+            assert!(!map.contains_id(Id::from_index(i)), "unused it being invalid");
             let id = map.insert(i);
-            assert!(map.contains(id), "used id being valid");
+            assert!(map.contains_id(id), "used id being valid");
         }
 
         assert_eq!(map.len(), len, "map length after inserting multiple elements");
 
         while let Some(remaining_id) = map.ids().next() {
-            assert!(map.contains(remaining_id), "used id being valid");
+            assert!(map.contains_id(remaining_id), "used id being valid");
             map.remove(remaining_id);
-            assert!(!map.contains(remaining_id), "unused it being invalid");
+            assert!(!map.contains_id(remaining_id), "unused it being invalid");
         }
     }
 
