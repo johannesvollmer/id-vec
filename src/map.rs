@@ -4,7 +4,7 @@ use ::std::collections::HashSet;
 use ::id::*;
 
 
-/// create a new id_map by entering a series of values
+/// Create a new id_map by entering a series of values
 macro_rules! id_map {
     ( $($element:expr),* ) => {
         IdMap::from_vec(vec![ $($element),* ])
@@ -12,23 +12,21 @@ macro_rules! id_map {
 }
 
 
-/// behaves like a hash map with automatic key creation (unique id automatically created)
-/// internally utilizes a dense vector, and reuses deleted element slots
-/// which results in ids being reused (be careful not to delete an element that is still referenced because that will be overwritten)
-// TODO use rusts safety mechanisms to allow (but not enforce) stronger id lifetime safety? OwnedId<T>?
-// TODO impl Eq, Clone, Debug, ...
+/// Inserting elements into this map yields a persistent, type-safe Index to that new element.
 pub struct IdMap<T> {
-    /// packed dense vector, containing alive and dead elements.
-    /// because removing the last element directly can be done efficiently,
+    /// Packed dense vector, containing alive and dead elements.
+    /// Because removing the last element directly can be done efficiently,
     /// it is guaranteed that the last element is never unused.
     elements: Vec<T>,
 
-    /// contains all unused ids which are allowed to be overwritten,
+    /// Contains all unused ids which are allowed to be overwritten,
     /// will never contain the last ID, because the last id can be removed directly
     unused_indices: HashSet<Index>, // TODO if iteration is too slow, use both Vec<NextUnusedIndex> and BitVec
 }
 
 
+// TODO use rusts safety mechanisms to allow (but not enforce) stronger id lifetime safety? OwnedId<T>?
+// TODO impl Eq, Clone, Debug, ...
 
 impl<T> IdMap<T> {
     /// Does not allocate heap memory
