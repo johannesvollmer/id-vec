@@ -832,7 +832,7 @@ mod test {
     }
 
     #[test]
-    pub fn ids_elements_eq(){
+    pub fn test_ids_eq(){
         let mut map1 = id_map!(3,4,2,5,1);
         let mut map2 = id_map!(1,2,3,4,5);
 
