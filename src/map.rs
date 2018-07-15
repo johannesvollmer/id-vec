@@ -51,6 +51,11 @@ impl<T> IdMap<T> {
 
 
 
+    /// reserve space for more elements, avoiding frequent reallocation
+    pub fn reserve(&mut self, additional: usize){
+        self.elements.reserve(additional)
+    }
+
     /// Returns if this id is not deleted (does not check if index is inside vector range)
     fn index_is_currently_used(&self, index: Index) -> bool {
         index + 1 == self.elements.len() || // fast return for last element is always used
