@@ -144,8 +144,6 @@ impl<T> IdMap<T> {
         });
 
         self.pop_back_unused();
-
-        self.debug_assert_last_element_is_used();
         popped
     }
 
@@ -233,6 +231,20 @@ impl<T> IdMap<T> {
         self.debug_assert_last_element_is_used();
     }
 
+    /// Retain only the elements specified by the predicate. May deallocate unused elements.
+    pub fn retain<F>(&mut self, predicate: F) where F: Fn(Id<T>, &T) -> bool {
+        for index in 0..self.elements.len() {
+            let id = Id::from_index(index);
+            if !self.unused_indices.contains(&index)
+                && predicate(id, &self.elements[index])
+            {
+                self.unused_indices.insert(index);
+            }
+        }
+
+        self.pop_back_unused();
+    }
+
     /// Make this map have a continuous flow of indices, having no wasted allocation
     /// and calling remap(old_id, new_id) for every element that has been moved to a new Id
     // TODO test
@@ -257,6 +269,7 @@ impl<T> IdMap<T> {
             }
         }
 
+        self.debug_assert_last_element_is_used();
         self.shrink_to_fit();
     }
 
@@ -867,6 +880,17 @@ mod test {
         );
 
         assert_eq!(map.elements, vec![2, 1, 3]);
+    }
+
+
+    #[test]
+    pub fn test_retain(){
+        let mut map = id_map!(1,2,3,4,5,6);
+        map.retain(|id, elem| {
+            elem % 2 == 0
+        });
+
+        assert_eq!(map.elements().collect::<Vec<_>>(), vec![&1, &3, &5]);
     }
 
 
