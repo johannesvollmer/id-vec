@@ -1,24 +1,35 @@
 // extern crate num_traits;
 
 
+#[macro_use]
 pub mod map;
 pub mod id;
 
 pub use map::*;
 pub use id::*;
 
-
 #[cfg(test)]
-fn example() {
-    let mut words = IdMap::new();
+mod examples {
+    use super::*;
 
-    let id_hello = words.insert("hello");
-    let _id_world = words.insert("world");
+    #[test]
+    fn example1() {
+        let map = id_map!("hello", "world");
+        debug_assert!(map.contains_element(&"hello"));
+    }
 
-    println!("{:?} -> {:?}", id_hello, words.get(id_hello));
-    assert_eq!(words.get(id_hello), Some(&"hello"));
+    #[test]
+    fn example2() {
+        let mut words = IdMap::new();
 
-    words.remove(id_hello);
-    assert_eq!(words.get(id_hello), None);
+        let id_hello = words.insert("hello");
+        let _id_world = words.insert("world");
 
+        println!("{:?} -> {:?}", id_hello, words.get(id_hello));
+        assert_eq!(words.get(id_hello), Some(&"hello"));
+
+        words.remove(id_hello);
+        assert_eq!(words.get(id_hello), None);
+    }
 }
+
