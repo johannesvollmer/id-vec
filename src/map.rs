@@ -205,7 +205,12 @@ impl<T> IdMap<T> {
     }
 
 
-
+    /// Swap the elements pointed to. Panic on invalid Id parameter.
+    pub fn swap_elements(&mut self, id1: Id<T>, id2: Id<T>){
+        self.debug_assert_id_validity(id1, true);
+        self.debug_assert_id_validity(id2, true);
+        self.elements.swap(id1.index_value(), id2.index_value());
+    }
 
     /// Removes all elements, instantly deallocating
     pub fn clear(&mut self){
@@ -225,6 +230,7 @@ impl<T> IdMap<T> {
 
     /// Make this map have a continuous flow of indices, having no wasted allocation
     /// and calling remap(old_id, new_id) for every element that has been moved to a new Id
+    // TODO test
     // #[must_use]
     pub fn pack<F>(&mut self, remap: F) where F: Fn(&mut Self, Id<T>, Id<T>) {
         let unused_indices = ::std::mem::replace(
@@ -322,6 +328,7 @@ impl<T> IdMap<T> {
         self.iter().find(|&(_, e)| element == e)
             .map(|(id, _)| id)
     }
+
 }
 
 
@@ -843,6 +850,18 @@ mod test {
         map2.remove(Id::from_index(0));
         map2.remove(Id::from_index(3));
         assert!(map1.ids_eq(&map2));
+    }
+
+    #[test]
+    pub fn test_swap(){
+        let mut map = id_map!(1,2,3);
+
+        map.swap_elements(
+            Id::from_index(0),
+            Id::from_index(1),
+        );
+
+        assert_eq!(map.elements, vec![2, 1, 3]);
     }
 
 
