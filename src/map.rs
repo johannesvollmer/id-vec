@@ -289,11 +289,21 @@ impl<T> IdMap<T> {
     // because it would require multiple mutable references
 
     pub fn into_elements(self) -> IntoElements<T> {
-        IntoElements { map: self }
+        IntoElements {
+            exclusive_max_index: self.elements.len(),
+            iter: self.elements.into_iter(),
+            unused_ids: self.unused_indices,
+            next_index: 0,
+        }
     }
 
     pub fn drain_elements(&mut self) -> DrainElements<T> {
-        DrainElements { map: self }
+        DrainElements {
+            exclusive_max_index: self.elements.len(),
+            iter: self.elements.drain(..),
+            unused_ids: &mut self.unused_indices,
+            next_index: 0,
+        }
     }
 
     /// Used for immutable direct access to all used elements
@@ -414,7 +424,7 @@ impl<T> Default for IdMap<T> {
 
 
 
-
+// TODO all iterators can be ExactSizeIterators if they count how many deleted objects they have passed
 
 
 fn iter_next(
@@ -534,44 +544,76 @@ impl<'s, T: 's> DoubleEndedIterator for ElementIter<'s, T> {
 
 /// Note: always iterates backwards, because it just calls IdMap.pop()
 pub struct IntoElements<T> {
-    map: IdMap<T>, // map.unused_ids will be updated to allow len() and speed up remaining lookups
+    //map: IdMap<T>, // map.unused_ids will be updated to allow len() and speed up remaining lookups
+    iter: ::std::vec::IntoIter<T>,
+    unused_ids: HashSet<Index>,
+    exclusive_max_index: Index,
+    next_index: Index,
 }
 
-impl<T> ::std::iter::ExactSizeIterator for IntoElements<T> {}
 impl<T> Iterator for IntoElements<T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.map.pop_element()
+        while self.unused_ids.remove(&self.next_index) {
+            self.next_index += 1;
+            self.iter.next().unwrap(); // skip deleted element
+        }
+
+        if self.next_index < self.exclusive_max_index {
+            self.next_index += 1;
+            Some(self.iter.next().unwrap())
+
+        } else {
+            None
+        }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.map.len(), Some(self.map.len()))
+        let max = self.exclusive_max_index - self.next_index;
+        let min = max.checked_sub(self.unused_ids.len()).unwrap_or(0); // TODO +1? -1?
+        (min, Some(max))
     }
 }
 
 
 /// Note: always iterates backwards, because it just calls IdMap.pop()
 pub struct DrainElements<'s, T: 's> {
-    map: &'s mut IdMap<T>,
+    iter: ::std::vec::Drain<'s, T>,
+    unused_ids: &'s mut HashSet<Index>,
+    exclusive_max_index: Index,
+    next_index: Index,
 }
 
-impl<'s, T: 's> ::std::iter::ExactSizeIterator for DrainElements<'s, T> {}
 impl<'s, T: 's> Iterator for DrainElements<'s, T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.map.pop_element()
+        while self.unused_ids.remove(&self.next_index) {
+            self.next_index += 1;
+            self.iter.next().unwrap(); // skip deleted element
+        }
+
+        if self.next_index < self.exclusive_max_index {
+            self.next_index += 1;
+            Some(self.iter.next().unwrap())
+
+        } else {
+            None
+        }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.map.len(), Some(self.map.len()))
+        let max = self.exclusive_max_index - self.next_index;
+        let min = max.checked_sub(self.unused_ids.len()).unwrap_or(0); // TODO +1? -1?
+        (min, Some(max))
     }
 }
 
 impl<'s, T: 's> Drop for DrainElements<'s, T> {
     fn drop(&mut self) {
-        self.map.clear();
+        // map.elements is cleared by self.iter
+        self.unused_ids.clear();
     }
 }
 
@@ -755,15 +797,15 @@ mod test {
 
         assert_eq!(
             map.into_iter().collect::<Vec<_>>(),
-            vec![4, 3, 2, 0],
-            "into_iterator contains all elements"
+            vec![0, 2, 3, 4],
+            "into_iterator containing all elements"
         );
     }
 
     #[test]
     pub fn test_drain(){
         let mut map = id_map!(0, 1, 2, 3);
-        assert_eq!(map.drain_elements().next(), Some(3));
+        assert_eq!(map.drain_elements().next(), Some(0));
         assert!(map.is_empty(), "aborting drain clears map");
     }
 
@@ -778,7 +820,7 @@ mod test {
         map.remove(zero);
         map.remove(two);
 
-        assert_eq!(map.into_iter().collect::<Vec<_>>(), vec![4, 3], "into_iter containing only non-removed elements")
+        assert_eq!(map.into_iter().collect::<Vec<_>>(), vec![3, 4], "into_iter containing only non-removed elements")
     }
 
     #[test]
@@ -797,7 +839,7 @@ mod test {
 
         assert_eq!(
             map.elements().rev().collect::<Vec<_>>(),
-            vec![&5, &2, /*deleted 1,*/ &0],
+            vec![&5, /*deleted 1,*/ &2, &0],
             "double ended element iter"
         );
 
@@ -815,7 +857,7 @@ mod test {
                 .map(|id| id.index_value())
                 .collect::<Vec<_>>(),
 
-            vec![3, 2, /*deleted 1,*/ 0],
+            vec![3, /*deleted 1,*/ 2, 0],
             "double ended id iter"
         );
 
