@@ -1,5 +1,4 @@
 
-use ::std::collections::HashMap;
 use ::std::collections::HashSet;
 use ::id::*;
 
@@ -27,9 +26,9 @@ pub struct IdMap<T> {
 
 
 // TODO use rusts safety mechanisms to allow (but not enforce) stronger id lifetime safety? OwnedId<T>?
-// TODO impl Eq, Clone, Debug, ...
 
 impl<T> IdMap<T> {
+
     /// Does not allocate heap memory
     pub fn new() -> Self {
         Self::with_capacity(0)
@@ -51,10 +50,6 @@ impl<T> IdMap<T> {
 
 
 
-    /// reserve space for more elements, avoiding frequent reallocation
-    pub fn reserve(&mut self, additional: usize){
-        self.elements.reserve(additional)
-    }
 
     /// Returns if this id is not deleted (does not check if index is inside vector range)
     fn index_is_currently_used(&self, index: Index) -> bool {
@@ -69,7 +64,7 @@ impl<T> IdMap<T> {
     #[inline(always)]
     fn debug_assert_id_validity(&self, element: Id<T>, validity: bool){
         debug_assert!(
-            self.contains(element) == validity,
+            self.contains_id(element) == validity,
             "Expected {:?} validity to be {}, but was not", element, validity
         );
     }
@@ -78,7 +73,7 @@ impl<T> IdMap<T> {
     fn debug_assert_last_element_is_used(&self){
         if !self.is_empty() {
             debug_assert!(
-                self.contains(Id::from_index(self.elements.len() - 1)),
+                self.contains_id(Id::from_index(self.elements.len() - 1)),
                 "IdMap has invalid state: Last element is unused."
             );
         }
@@ -96,7 +91,7 @@ impl<T> IdMap<T> {
     }
 
     /// Excludes deleted elements, and indices out of range
-    pub fn contains(&self, element: Id<T>) -> bool {
+    pub fn contains_id(&self, element: Id<T>) -> bool {
         self.index_is_in_range(element.index_value())
             && self.index_is_currently_used(element.index_value())
     }
@@ -222,13 +217,16 @@ impl<T> IdMap<T> {
         debug_assert!(self.is_empty());
     }
 
-    /// removes unused elements at the end of the internal vector
-    /// and shrinks the internal vector itself
-    // TODO test
+    /// Shrinks the internal vector itself
     pub fn shrink_to_fit(&mut self){
         self.elements.shrink_to_fit();
         self.unused_indices.shrink_to_fit(); // bottleneck? reinserts all elements into a new map
         self.debug_assert_last_element_is_used();
+    }
+
+    /// Reserve space for more elements, avoiding frequent reallocation
+    pub fn reserve(&mut self, additional: usize){
+        self.elements.reserve(additional)
     }
 
     /// Retain only the elements specified by the predicate. May deallocate unused elements.
@@ -291,8 +289,8 @@ impl<T> IdMap<T> {
     pub fn into_elements(self) -> IntoElements<T> {
         IntoElements {
             exclusive_max_index: self.elements.len(),
-            iter: self.elements.into_iter(),
             unused_ids: self.unused_indices,
+            iter: self.elements.into_iter(),
             next_index: 0,
         }
     }
@@ -300,8 +298,8 @@ impl<T> IdMap<T> {
     pub fn drain_elements(&mut self) -> DrainElements<T> {
         DrainElements {
             exclusive_max_index: self.elements.len(),
-            iter: self.elements.drain(..),
             unused_ids: &mut self.unused_indices,
+            iter: self.elements.drain(..),
             next_index: 0,
         }
     }
@@ -316,7 +314,7 @@ impl<T> IdMap<T> {
         IdIter { iter: self.iter() }
     }
 
-    /// Used for full mutable access, but allowing inserting and deleting while iterating.
+    /// Used for full mutable access, while allowing inserting and deleting while iterating.
     /// The iterator will keep an independent state, in order to un-borrow the underlying map.
     /// This may be more expensive than `iter`,
     /// because it needs to clone the internal set of unused ids.
@@ -334,7 +332,7 @@ impl<T> IdMap<T> {
     /// Complexity of O(n)
     pub fn ids_eq(&self, other: &Self) -> bool {
         self.len() == other.len()
-            && self.ids().all(|id| other.contains(id))
+            && self.ids().all(|id| other.contains_id(id))
     }
 
     /// Compares if two id-maps contain the same elements, ignoring ids.
@@ -387,14 +385,14 @@ impl<T> From<Vec<T>> for IdMap<T> {
 impl<T> ::std::ops::Index<Id<T>> for IdMap<T> {
     type Output = T;
     fn index(&self, element: Id<T>) -> &T {
-        debug_assert!(self.contains(element), "Indexing with invalid Id: `{:?}` ", element);
+        debug_assert!(self.contains_id(element), "Indexing with invalid Id: `{:?}` ", element);
         &self.elements[element.index_value()]
     }
 }
 
 impl<T> ::std::ops::IndexMut<Id<T>> for IdMap<T> {
     fn index_mut(&mut self, element: Id<T>) -> &mut T {
-        debug_assert!(self.contains(element), "Indexing-Mut with invalid Id: `{:?}` ", element);
+        debug_assert!(self.contains_id(element), "Indexing-Mut with invalid Id: `{:?}` ", element);
         &mut self.elements[element.index_value()]
     }
 }
@@ -729,20 +727,20 @@ mod test {
         let id_0 = map.insert(0); {
             assert_eq!(map.len(), 1, "map length after inserting");
             assert!(!map.is_empty(), "map emptiness after inserting");
-            assert!(map.contains(id_0), "containing `0` after inserting `0`");
+            assert!(map.contains_id(id_0), "containing `0` after inserting `0`");
             assert_eq!(map.get(id_0), Some(&0), "indexing `Some` after inserting `0`");
         }
 
         map.remove(id_0); {
             assert_eq!(map.get(id_0), None, "indexing `None` after deleting");
             assert_eq!(map.len(), 0, "map length after deleting");
-            assert!(!map.contains(id_0), "not containing `0` after removing `0`");
+            assert!(!map.contains_id(id_0), "not containing `0` after removing `0`");
             assert!(map.is_empty(), "map emptiness after deleting");
         }
 
         let id_1 = map.insert(1); {
-            assert!(map.contains(id_0), "containing overwritten `0` after inserting `1` into deleted slot");
-            assert!(map.contains(id_1), "containing `1` after inserting `1` into deleted slot");
+            assert!(map.contains_id(id_0), "containing overwritten `0` after inserting `1` into deleted slot");
+            assert!(map.contains_id(id_1), "containing `1` after inserting `1` into deleted slot");
             assert_eq!(map.get(id_1), Some(&1), "indexing `Some` after inserting into deleted slot");
             assert_eq!(map.get(id_0), Some(&1), "reusing unused id (old id pointing to new element)");
             assert_eq!(map.len(), 1, "map length after inserting into deleted slot");
@@ -756,17 +754,17 @@ mod test {
         let len = 42;
 
         for i in 0..42 {
-            assert!(!map.contains(Id::from_index(i)), "unused it being invalid");
+            assert!(!map.contains_id(Id::from_index(i)), "unused it being invalid");
             let id = map.insert(i);
-            assert!(map.contains(id), "used id being valid");
+            assert!(map.contains_id(id), "used id being valid");
         }
 
         assert_eq!(map.len(), len, "map length after inserting multiple elements");
 
         while let Some(remaining_id) = map.ids().next() {
-            assert!(map.contains(remaining_id), "used id being valid");
+            assert!(map.contains_id(remaining_id), "used id being valid");
             map.remove(remaining_id);
-            assert!(!map.contains(remaining_id), "unused it being invalid");
+            assert!(!map.contains_id(remaining_id), "unused it being invalid");
         }
     }
 
