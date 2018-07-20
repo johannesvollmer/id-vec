@@ -404,6 +404,12 @@ impl<T> PartialEq for IdMap<T> where T: PartialEq {
 }
 
 
+impl<T> Default for IdMap<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 
 
 
