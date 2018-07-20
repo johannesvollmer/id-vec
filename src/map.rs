@@ -947,6 +947,34 @@ mod test {
     }
 
 
+
+    #[test]
+    pub fn test_iter_size_hint(){
+        let mut map = id_map!(1,2,3,4,5,6);
+
+        assert_eq!(map.iter().size_hint(), (6, Some(6)));
+        assert_eq!(map.ids().size_hint(), (6, Some(6)));
+        assert_eq!(map.elements().size_hint(), (6, Some(6)));
+        assert_eq!(map.get_ids().size_hint(), (6, Some(6)));
+        assert_eq!(map.clone().into_elements().size_hint(), (6, Some(6)));
+
+        map.remove(Id::from_index(1));
+        map.remove(Id::from_index(3));
+
+        assert_eq!(map.iter().size_hint(), (4, Some(6)));
+        assert_eq!(map.ids().size_hint(), (4, Some(6)));
+        assert_eq!(map.elements().size_hint(), (4, Some(6)));
+        assert_eq!(map.get_ids().size_hint(), (4, Some(6)));
+        assert_eq!(map.clone().into_elements().size_hint(), (4, Some(6)));
+
+        let mut cloned = map.clone();
+        let drain_size = cloned.drain_elements().size_hint();
+        assert_eq!(drain_size, (4, Some(6)));
+    }
+
+
+
+
     // TODO test repeated random removing and inserting
 
 }
