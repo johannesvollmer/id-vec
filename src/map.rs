@@ -808,6 +808,13 @@ mod test {
     }
 
     #[test]
+    pub fn test_contains_element(){
+        let map = id_map!(0, 1, 2, 3);
+        assert!(map.contains_element(&2), "containing element");
+        assert!(!map.contains_element(&4), "not containing element");
+    }
+
+    #[test]
     pub fn test_into_iterator_with_deleted_elements(){
         let mut map = IdMap::new();
         let zero = map.insert(0);
@@ -932,7 +939,7 @@ mod test {
     #[test]
     pub fn test_retain(){
         let mut map = id_map!(1,2,3,4,5,6);
-        map.retain(|id, elem| {
+        map.retain(|_id, elem| {
             elem % 2 == 0
         });
 
