@@ -549,6 +549,7 @@ pub struct IntoElements<T> {
     next_index: Index,
 }
 
+impl<T> ExactSizeIterator for IntoElements<T> {}
 impl<T> Iterator for IntoElements<T> {
     type Item = T;
 
@@ -568,9 +569,9 @@ impl<T> Iterator for IntoElements<T> {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let max = self.exclusive_max_index - self.next_index;
-        let min = max.checked_sub(self.unused_ids.len()).unwrap_or(0); // TODO +1? -1?
-        (min, Some(max))
+        let elements = self.exclusive_max_index - self.next_index;
+        let used = elements - self.unused_ids.len(); // self.unused_ids is updated on self.next()
+        (used, Some(used))
     }
 }
 
@@ -583,6 +584,7 @@ pub struct DrainElements<'s, T: 's> {
     next_index: Index,
 }
 
+impl<'s, T: 's> ExactSizeIterator for DrainElements<'s, T> {}
 impl<'s, T: 's> Iterator for DrainElements<'s, T> {
     type Item = T;
 
@@ -602,9 +604,9 @@ impl<'s, T: 's> Iterator for DrainElements<'s, T> {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let max = self.exclusive_max_index - self.next_index;
-        let min = max.checked_sub(self.unused_ids.len()).unwrap_or(0); // TODO +1? -1?
-        (min, Some(max))
+        let elements = self.exclusive_max_index - self.next_index;
+        let used = elements - self.unused_ids.len(); // self.unused_ids is updated on self.next()
+        (used, Some(used))
     }
 }
 
@@ -965,11 +967,16 @@ mod test {
         assert_eq!(map.ids().size_hint(), (4, Some(6)));
         assert_eq!(map.elements().size_hint(), (4, Some(6)));
         assert_eq!(map.get_ids().size_hint(), (4, Some(6)));
-        assert_eq!(map.clone().into_elements().size_hint(), (4, Some(6)));
 
-        let mut cloned = map.clone();
-        let drain_size = cloned.drain_elements().size_hint();
-        assert_eq!(drain_size, (4, Some(6)));
+
+        // exact size:
+        assert_eq!(map.clone().into_elements().size_hint(), (4, Some(4)));
+        {
+            let mut cloned = map.clone();
+            let drain_size = cloned.drain_elements().size_hint();
+            assert_eq!(drain_size, (4, Some(4)));
+        }
+
     }
 
 
