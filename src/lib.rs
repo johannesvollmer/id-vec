@@ -16,7 +16,7 @@ mod examples {
     fn example1() {
         let map = id_vec!("hello", "world");
         debug_assert!(map.contains_element(&"hello"));
-        println!("{:?}", words);
+        println!("{:?}", map);
     }
 
     #[test]
