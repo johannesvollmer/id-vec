@@ -13,7 +13,7 @@ macro_rules! id_vec {
 
 /// Inserting elements into this map yields a persistent, type-safe Index to that new element.
 /// It does not try to preserve the order of the inserted items.
-#[derive(Clone, Debug)] // manual impl: Eq, PartialEq
+#[derive(Clone)] // manual impl: Eq, PartialEq
 pub struct IdVec<T> {
     /// Packed dense vector, containing alive and dead elements.
     /// Because removing the last element directly can be done efficiently,
@@ -417,13 +417,25 @@ impl<T> PartialEq for IdVec<T> where T: PartialEq {
     }
 }
 
-
 impl<T> Default for IdVec<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
+use ::std::fmt::Debug;
+impl<T> Debug for IdVec<T> where T: Debug {
+    fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
+        write!(formatter, "{{ ")?;
+
+        for (id, element) in self.iter() {
+            write!(formatter, "{:?}: {:?}, ", id, element)?;
+        }
+
+        write!(formatter, "}}")?;
+        Ok(())
+    }
+}
 
 
 
