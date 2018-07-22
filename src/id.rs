@@ -1,9 +1,9 @@
 pub type Index = usize; // TODO make this a type parameter
 use ::vec::IdVec;
 
-/// used as a key to access an instance inside a Storage<T>.
-/// internally only an integer index (but with greater type safety)
-// manually implemented hash, clone, copy, ..
+/// Used as a key to access an instance inside a IdVec<T>.
+/// Internally, this is only an integer index (but with greater type safety).
+// manually implementing hash, clone, copy,
 pub struct Id<T> {
     index: Index,
     _marker: ::std::marker::PhantomData<T>,
@@ -15,18 +15,19 @@ impl<T> Id<T> {
         Id { index, _marker: ::std::marker::PhantomData, }
     }
 
-    /// convienience function which allows writing the index first, and the storage afterwards
-    /// example: the_selected_entity.of(entities);
+    /// Convenience function which allows writing the index first, and the IdVec afterwards.
+    /// Example: `the_selected_entity.of(entities)`
     pub fn of<'s>(self, vec: &'s IdVec<T>) -> &'s T {
         &vec[self]
     }
 
-    /// convienience function which allows writing the index first, and the storage afterwards
-    /// example: the_selected_entity.of(entities);
+    /// Convenience function which allows writing the index first, and the IdVec afterwards.
+    /// Example: `the_selected_entity.of_mut(entities)`
     pub fn of_mut<'s>(self, vec: &'s mut IdVec<T>) -> &'s mut T {
         &mut vec[self]
     }
 
+    /// The actual integer value for this Id.
     pub fn index_value(self) -> Index {
         self.index
     }
