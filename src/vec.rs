@@ -13,6 +13,9 @@ macro_rules! id_vec {
 
 /// Inserting elements into this map yields a persistent, type-safe Index to that new element.
 /// It does not try to preserve the order of the inserted items.
+///
+/// The IdVec does not actively try to preserve order of inserted elements,
+/// but a packed IdVec will append elements to the end of the internal vector.
 #[derive(Clone)] // manual impl: Eq, PartialEq
 pub struct IdVec<T> {
     /// Packed dense vector, containing alive and dead elements.
@@ -97,7 +100,7 @@ impl<T> IdVec<T> {
             && self.index_is_currently_used(element.index_value())
     }
 
-    /// Returns if the internal vector contains any deleted elements
+    /// Returns if the internal vector does not contain any deleted elements
     pub fn is_packed(&self) -> bool {
         self.unused_indices.is_empty()
     }
