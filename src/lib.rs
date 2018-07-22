@@ -2,10 +2,10 @@
 
 
 #[macro_use]
-pub mod map;
+pub mod vec;
 pub mod id;
 
-pub use map::*;
+pub use vec::*;
 pub use id::*;
 
 #[cfg(test)]
@@ -14,13 +14,13 @@ mod examples {
 
     #[test]
     fn example1() {
-        let map = id_map!("hello", "world");
+        let map = id_vec!("hello", "world");
         debug_assert!(map.contains_element(&"hello"));
     }
 
     #[test]
     fn example2() {
-        let mut words = IdMap::new();
+        let mut words = IdVec::new();
 
         let id_hello = words.insert("hello");
         let _id_world = words.insert("world");

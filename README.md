@@ -1,13 +1,13 @@
-# IdMap
+# IdVec
 
-Inserting elements into this map yields a persistent, 
+Inserting elements into this Vec yields a persistent, 
 type-safe Index to that new element.
 
 
 ## Usage
 
 ```rust
-let mut words = IdMap::new();
+let mut words = IdVec::new();
 
 let id_hello: Id<&str> = words.insert("hello");
 let id_world: Id<&str> = words.insert("world");
@@ -17,7 +17,7 @@ println!("{:?} -> {:?}", id_hello, words.get(id_hello));
 ```
 
 
-You can think of the IdMap as a vector that 
+You can think of the IdVec as a vector that 
 reuses slots. It inserts new elements into 
 places where old elements were removed, 
 instead of shifting all the remaining elements by one. 

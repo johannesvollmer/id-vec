@@ -1,5 +1,5 @@
 pub type Index = usize; // TODO make this a type parameter
-use ::map::IdMap;
+use ::vec::IdVec;
 
 /// used as a key to access an instance inside a Storage<T>.
 /// internally only an integer index (but with greater type safety)
@@ -17,13 +17,13 @@ impl<T> Id<T> {
 
     /// convienience function which allows writing the index first, and the storage afterwards
     /// example: the_selected_entity.of(entities);
-    pub fn of<'s>(self, vec: &'s IdMap<T>) -> &'s T {
+    pub fn of<'s>(self, vec: &'s IdVec<T>) -> &'s T {
         &vec[self]
     }
 
     /// convienience function which allows writing the index first, and the storage afterwards
     /// example: the_selected_entity.of(entities);
-    pub fn of_mut<'s>(self, vec: &'s mut IdMap<T>) -> &'s mut T {
+    pub fn of_mut<'s>(self, vec: &'s mut IdVec<T>) -> &'s mut T {
         &mut vec[self]
     }
 

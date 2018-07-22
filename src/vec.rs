@@ -3,10 +3,10 @@ use ::std::collections::HashSet;
 use ::id::*;
 
 
-/// Create a new id_map by entering a series of values
-macro_rules! id_map {
+/// Create a new id_vec by entering a series of values
+macro_rules! id_vec {
     ( $($element:expr),* ) => {
-        IdMap::from_vec(vec![ $($element),* ])
+        IdVec::from_vec(vec![ $($element),* ])
     };
 }
 
@@ -14,7 +14,7 @@ macro_rules! id_map {
 /// Inserting elements into this map yields a persistent, type-safe Index to that new element.
 /// It does not try to preserve the order of the inserted items.
 #[derive(Clone, Debug)] // manual impl: Eq, PartialEq
-pub struct IdMap<T> {
+pub struct IdVec<T> {
     /// Packed dense vector, containing alive and dead elements.
     /// Because removing the last element directly can be done efficiently,
     /// it is guaranteed that the last element is never unused.
@@ -28,7 +28,7 @@ pub struct IdMap<T> {
 
 // TODO use rusts safety mechanisms to allow (but not enforce) stronger id lifetime safety? OwnedId<T>?
 
-impl<T> IdMap<T> {
+impl<T> IdVec<T> {
 
     /// Does not allocate heap memory
     pub fn new() -> Self {
@@ -43,7 +43,7 @@ impl<T> IdMap<T> {
     /// Directly uses the specified vector,
     /// so no allocation is made calling this function.
     pub fn from_vec(elements: Vec<T>) -> Self {
-        IdMap {
+        IdVec {
             unused_indices: HashSet::new(), // no elements deleted
             elements,
         }
@@ -365,14 +365,14 @@ impl<T> IdMap<T> {
 
 
 // enable using .collect() on an iterator to construct self
-impl<T> ::std::iter::FromIterator<T> for IdMap<T> {
+impl<T> ::std::iter::FromIterator<T> for IdVec<T> {
     fn from_iter<I: IntoIterator<Item=T>>(iter: I) -> Self {
-        IdMap::from_vec(iter.into_iter().collect())
+        IdVec::from_vec(iter.into_iter().collect())
     }
 }
 
 // enable using .collect() on self
-impl<T> ::std::iter::IntoIterator for IdMap<T> {
+impl<T> ::std::iter::IntoIterator for IdVec<T> {
     type Item = T;
     type IntoIter = IntoElements<T>;
     fn into_iter(self) -> Self::IntoIter {
@@ -380,15 +380,15 @@ impl<T> ::std::iter::IntoIterator for IdMap<T> {
     }
 }
 
-impl<T> From<Vec<T>> for IdMap<T> {
+impl<T> From<Vec<T>> for IdVec<T> {
     fn from(vec: Vec<T>) -> Self {
-        IdMap::from_vec(vec)
+        IdVec::from_vec(vec)
     }
 }
 
 
 
-impl<T> ::std::ops::Index<Id<T>> for IdMap<T> {
+impl<T> ::std::ops::Index<Id<T>> for IdVec<T> {
     type Output = T;
     fn index(&self, element: Id<T>) -> &T {
         debug_assert!(self.contains_id(element), "Indexing with invalid Id: `{:?}` ", element);
@@ -396,7 +396,7 @@ impl<T> ::std::ops::Index<Id<T>> for IdMap<T> {
     }
 }
 
-impl<T> ::std::ops::IndexMut<Id<T>> for IdMap<T> {
+impl<T> ::std::ops::IndexMut<Id<T>> for IdVec<T> {
     fn index_mut(&mut self, element: Id<T>) -> &mut T {
         debug_assert!(self.contains_id(element), "Indexing-Mut with invalid Id: `{:?}` ", element);
         &mut self.elements[element.index_value()]
@@ -406,8 +406,8 @@ impl<T> ::std::ops::IndexMut<Id<T>> for IdMap<T> {
 
 /// Equality means: The same Ids pointing to the same elements, ignoring deleted elements.
 /// Complexity of O(n)
-impl<T> Eq for IdMap<T> where T: Eq {}
-impl<T> PartialEq for IdMap<T> where T: PartialEq {
+impl<T> Eq for IdVec<T> where T: Eq {}
+impl<T> PartialEq for IdVec<T> where T: PartialEq {
     fn eq(&self, other: &Self) -> bool {
         self.len() == other.len() && self.iter()
             .zip(other.iter()) // use iterators to automatically ignore deleted elements
@@ -418,7 +418,7 @@ impl<T> PartialEq for IdMap<T> where T: PartialEq {
 }
 
 
-impl<T> Default for IdMap<T> {
+impl<T> Default for IdVec<T> {
     fn default() -> Self {
         Self::new()
     }
@@ -483,7 +483,7 @@ fn iter_next_back(
 pub struct Iter<'s, T: 's> {
     inclusive_front_index: Index,
     exclusive_back_index: Index,
-    storage: &'s IdMap<T>,
+    storage: &'s IdVec<T>,
 }
 
 impl<'s, T: 's> Iterator for Iter<'s, T> {
@@ -711,26 +711,26 @@ mod test {
     #[test]
     pub fn test_from_iterator(){
         let vec = vec![0, 1, 2, 5];
-        let map = vec.into_iter().collect::<IdMap<_>>();
+        let map = vec.into_iter().collect::<IdVec<_>>();
         assert_eq!(map.elements, vec![0, 1, 2, 5]);
     }
 
     #[test]
     pub fn test_from_vec(){
         let vec = vec![0, 1, 2, 5];
-        let map = IdMap::from_vec(vec);
+        let map = IdVec::from_vec(vec);
         assert_eq!(map.elements, vec![0, 1, 2, 5]);
     }
 
     #[test]
     pub fn test_from_macro(){
-        let map = id_map!(0, 1, 2, 5);
+        let map = id_vec!(0, 1, 2, 5);
         assert_eq!(map.elements, vec![0, 1, 2, 5]);
     }
 
     #[test]
     pub fn test_insert_and_remove_single_element(){
-        let mut map = IdMap::new();
+        let mut map = IdVec::new();
 
         let id_0 = map.insert(0); {
             assert_eq!(map.len(), 1, "map length after inserting");
@@ -758,7 +758,7 @@ mod test {
 
     #[test]
     pub fn test_insert_and_remove_multiple_elements(){
-        let mut map = IdMap::new();
+        let mut map = IdVec::new();
         let len = 42;
 
         for i in 0..42 {
@@ -778,7 +778,7 @@ mod test {
 
     #[test]
     pub fn test_pop(){
-        let mut map = id_map!(0, 2, 5);
+        let mut map = id_vec!(0, 2, 5);
         assert_eq!(map.pop(), Some((Id::from_index(2), 5)), "`pop()` returning the last element");
         assert!(map.is_packed(), "`pop()`not inserting into `unused_ids`");
 
@@ -796,7 +796,7 @@ mod test {
 
     #[test]
     pub fn test_into_iterator(){
-        let map = IdMap {
+        let map = IdVec {
             elements: vec![0, 2, 3, 4],
             unused_indices: HashSet::new(),
         };
@@ -810,21 +810,21 @@ mod test {
 
     #[test]
     pub fn test_drain(){
-        let mut map = id_map!(0, 1, 2, 3);
+        let mut map = id_vec!(0, 1, 2, 3);
         assert_eq!(map.drain_elements().next(), Some(0));
         assert!(map.is_empty(), "aborting drain clears map");
     }
 
     #[test]
     pub fn test_contains_element(){
-        let map = id_map!(0, 1, 2, 3);
+        let map = id_vec!(0, 1, 2, 3);
         assert!(map.contains_element(&2), "containing element");
         assert!(!map.contains_element(&4), "not containing element");
     }
 
     #[test]
     pub fn test_into_iterator_with_deleted_elements(){
-        let mut map = IdMap::new();
+        let mut map = IdVec::new();
         let zero = map.insert(0);
         let two = map.insert(2);
         map.insert(3);
@@ -838,7 +838,7 @@ mod test {
 
     #[test]
     pub fn test_elements_iter(){
-        let mut map = id_map!(0, 1, 2, 5);
+        let mut map = id_vec!(0, 1, 2, 5);
 
         map.remove(Id::from_index(1));
         assert_eq!(map.len(), 3, "removing decrements len");
@@ -892,8 +892,8 @@ mod test {
     /// the same ids pointing to the same elements
     #[test]
     pub fn test_eq(){
-        let mut map1 = id_map!(0,2,2,4,4);
-        let mut map2 = id_map!(1,2,3,4,5);
+        let mut map1 = id_vec!(0,2,2,4,4);
+        let mut map2 = id_vec!(1,2,3,4,5);
 
         map1.remove(Id::from_index(0));
         map1.remove(Id::from_index(2));
@@ -909,8 +909,8 @@ mod test {
 
     #[test]
     pub fn test_elements_eq(){
-        let     map1 = id_map!(3,4,2,5,1);
-        let mut map2 = id_map!(1,2,3,4,5);
+        let     map1 = id_vec!(3,4,2,5,1);
+        let mut map2 = id_vec!(1,2,3,4,5);
         assert!(map1.elements_eq(&map2));
 
         map2.pop();
@@ -919,8 +919,8 @@ mod test {
 
     #[test]
     pub fn test_ids_eq(){
-        let mut map1 = id_map!(3,4,2,5,1);
-        let mut map2 = id_map!(1,2,3,4,5);
+        let mut map1 = id_vec!(3,4,2,5,1);
+        let mut map2 = id_vec!(1,2,3,4,5);
 
         map1.remove(Id::from_index(0));
         map1.remove(Id::from_index(3));
@@ -933,7 +933,7 @@ mod test {
 
     #[test]
     pub fn test_swap(){
-        let mut map = id_map!(1,2,3);
+        let mut map = id_vec!(1,2,3);
 
         map.swap_elements(
             Id::from_index(0),
@@ -946,7 +946,7 @@ mod test {
 
     #[test]
     pub fn test_retain(){
-        let mut map = id_map!(1,2,3,4,5,6);
+        let mut map = id_vec!(1,2,3,4,5,6);
         map.retain(|_id, elem| {
             elem % 2 == 0
         });
@@ -958,7 +958,7 @@ mod test {
 
     #[test]
     pub fn test_iter_size_hint(){
-        let mut map = id_map!(1,2,3,4,5,6);
+        let mut map = id_vec!(1,2,3,4,5,6);
 
         assert_eq!(map.iter().size_hint(), (6, Some(6)));
         assert_eq!(map.ids().size_hint(), (6, Some(6)));
@@ -989,7 +989,7 @@ mod test {
 
     #[test]
     pub fn test_packing(){
-        let mut map = id_map!(0,1,2,3,4,5,6);
+        let mut map = id_vec!(0,1,2,3,4,5,6);
         assert_eq!(map.elements.len(), 7);
         assert!(map.contains_element(&2));
         assert!(map.contains_element(&3));

@@ -1,11 +1,11 @@
 [package]
-name = "id-map"
+name = "id-vec"
 version = "0.5.0"
 authors = ["johannesvollmer <johannes596@t-online.de>"]
-description = "Simplify Graphs in Rust. Introduces struct Map<Id, T>, which automatically creates Ids for each new object, reusing deleted Ids. "
+description = "Simplify Graphs in Rust. Introduces IdVec, which automatically creates Ids for each new object, reusing deleted Ids. "
 repository = "https://github.com/johannesvollmer/id-map"
 readme = "README.md"
-keywords = ["map", "graph", "index", "id"]
+keywords = ["map", "graph", "index", "id", "vec"]
 categories = ["data-structures", "memory-management", "rust-patterns"]
 license = "MIT"
 maintenance = { status = "passively-maintained" }
