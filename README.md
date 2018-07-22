@@ -69,10 +69,12 @@ connected graph nodes.__
 
 ## Why not use [Slab](https://github.com/carllerche/slab)?
 
-This library is a different implementation, and thus may have
-better runtime performance for special use cases.
-
-Also, this library provides a different set of features, including:
+-   This library is a different implementation, 
+    and thus may have better runtime performance for special use cases
+-   Indexing is done using a type-safe Id 
+    instead of a plain, less safe `usize`.
+    (Also, using a `usize` falsely suggests some sort of linear ordering, 
+    like in a regular Vec)
 -   `DoubleEndedIterator`s, enabling `.iter().rev()`
 -   `map.pack(...)`, which reorders the map to remove all unused slots, 
     reducing memory overhead after a series of deletions
