@@ -5,8 +5,8 @@
 pub mod vec;
 pub mod id;
 
-pub use vec::*;
-pub use id::*;
+pub use vec::IdVec;
+pub use id::Id;
 
 #[cfg(test)]
 mod examples {
