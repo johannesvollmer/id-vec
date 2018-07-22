@@ -16,6 +16,7 @@ mod examples {
     fn example1() {
         let map = id_vec!("hello", "world");
         debug_assert!(map.contains_element(&"hello"));
+        println!("{:?}", words);
     }
 
     #[test]
@@ -32,15 +33,5 @@ mod examples {
         assert_eq!(words.get(id_hello), None);
     }
 
-    #[test]
-    fn example3() {
-        let mut words = id_vec!(0, 5, 6);
-        println!("{:?}", words);
-
-        let mut map = ::std::collections::HashMap::new();
-        map.insert(0, 14.0);
-        map.insert(1, 16.0);
-        println!("{:?}", map);
-    }
 }
 
