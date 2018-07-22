@@ -64,6 +64,16 @@ __This library provides a container built specifically for that use case of
 connected graph nodes.__
 
 
+## Why not use [Slab](https://github.com/carllerche/slab)?
+
+This library is a different implementation, and thus may have
+better runtime performance for special use cases.
+
+Also, this library provides a different set of features, including:
+-   `DoubleEndedIterator`s, enabling `.iter().rev()`
+-   `map.pack(...)`, which reorders the map to remove all unused slots, 
+    reducing memory overhead after a series of deletions
+
 ## Architecture
 
 This project has two core structs: the map itself, and the id. 
@@ -74,7 +84,11 @@ of deleted elements in a hash set, which is fast for insertion of new elements
 but may be not as fast as BitVec for indexing. 
 
 
-## Other interesing crates
+## Other interesting crates
+
+- __[Slab](https://github.com/carllerche/slab)__: 
+
+    Identical purpose, but different implementation and a different set of features.
 
 -   __[Froggy](https://github.com/kvark/froggy): Component-Graph-System__
 
