@@ -1,3 +1,6 @@
+[![Crate](https://img.shields.io/crates/v/id-vec.svg)](https://crates.io/crates/id-vec)
+[![Documentation](https://docs.rs/id-vec/badge.svg)](https://docs.rs/crate/id-vec/)
+
 # IdVec
 
 Inserting elements into this Vec yields a persistent, 
@@ -36,7 +39,7 @@ simply add this line to your `Cargo.toml` dependencies:
 
 ```toml
 [dependencies]
-id-vec = "0.5.0"
+id-vec = "*"
 ```
 
 ## Motivation 
