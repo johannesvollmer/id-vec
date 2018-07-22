@@ -813,6 +813,21 @@ mod test {
         let mut map = id_vec!(0, 1, 2, 3);
         assert_eq!(map.drain_elements().next(), Some(0));
         assert!(map.is_empty(), "aborting drain clears map");
+
+        // test element in the middle removed
+        map.insert(12);
+        map.insert(4);
+        map.insert(5);
+        map.remove(Id::from_index(1));
+        assert_eq!(map.drain_elements().collect::<Vec<_>>(), vec![12, 5]);
+
+        // test first and last element removed
+        map.insert(14);
+        map.insert(44);
+        map.insert(500);
+        map.remove(Id::from_index(0));
+        map.remove(Id::from_index(2));
+        assert_eq!(map.drain_elements().collect::<Vec<_>>(), vec![44]);
     }
 
     #[test]
@@ -877,12 +892,63 @@ mod test {
         assert_eq!(
             map.get_ids()
                 .map(|id| {
-                    map.remove(id);
+                    let (_old_id, element) = map.pop().unwrap();
+                    map.insert(element);
+
                     id.index_value()
                 })
                 .collect::<Vec<_>>(),
 
             vec![0, /*deleted 1,*/ 2, 3],
+            "owning id iter"
+        );
+    }
+
+    #[test]
+    pub fn test_deleted_elements_iter(){
+        let mut map = id_vec!(0, 1, 2, 5);
+
+        // remove first and last element
+        map.remove(Id::from_index(0));
+        map.pop();
+
+        assert_eq!(
+            map.elements().collect::<Vec<_>>(),
+            vec![&1, &2], "iter non-removed elements"
+        );
+
+        assert_eq!(
+            map.elements().rev().collect::<Vec<_>>(),
+            vec![&2, &1], "double ended element iter"
+        );
+
+        assert_eq!(
+            map.ids()
+                .map(|id| id.index_value())
+                .collect::<Vec<_>>(),
+
+            vec![1, 2], "iter non-removed ids"
+        );
+
+        assert_eq!(
+            map.ids().rev()
+                .map(|id| id.index_value())
+                .collect::<Vec<_>>(),
+
+            vec![2, 1], "double ended id iter"
+        );
+
+        assert_eq!(
+            map.get_ids()
+                .map(|id| {
+                    let (_old_id, element) = map.pop().unwrap();
+                    map.insert(element);
+
+                    id.index_value()
+                })
+                .collect::<Vec<_>>(),
+
+            vec![1, 2],
             "owning id iter"
         );
     }
