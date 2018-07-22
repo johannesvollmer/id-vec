@@ -12,6 +12,7 @@ macro_rules! id_map {
 
 
 /// Inserting elements into this map yields a persistent, type-safe Index to that new element.
+/// It does not try to preserve the order of the inserted items.
 #[derive(Clone, Debug)] // manual impl: Eq, PartialEq
 pub struct IdMap<T> {
     /// Packed dense vector, containing alive and dead elements.
@@ -245,29 +246,34 @@ impl<T> IdMap<T> {
 
     /// Make this map have a continuous flow of indices, having no wasted allocation
     /// and calling remap(old_id, new_id) for every element that has been moved to a new Id
-    // TODO test
+    /// It does not preserve order of the inserted items.
     // #[must_use]
-    pub fn pack<F>(&mut self, remap: F) where F: Fn(&mut Self, Id<T>, Id<T>) {
-        let unused_indices = ::std::mem::replace(
+    pub fn pack<F>(&mut self, remap: F) where F: Fn(Id<T>, Id<T>) {
+        let mut unused_indices = ::std::mem::replace(
             &mut self.unused_indices,
             HashSet::new() // does not allocate
         );
 
-        for unused_index in unused_indices.into_iter() {
-            // unused_index may have already been removed in a previous iteration, so check
-            if self.index_is_in_range(unused_index){
-                self.debug_assert_last_element_is_used();
+        while let Some(&unused_index) = unused_indices.iter().next() {
+            // unused_index may have already been removed in a previous iteration at pop_back_unused, so check for:
+            if unused_index < self.elements.len() {
                 let last_used_element_index = self.elements.len() - 1;
+                debug_assert_ne!(unused_index, last_used_element_index, "Last element of IdMap is not used");
 
                 self.elements.swap(last_used_element_index, unused_index);
-                self.elements.pop(); // pop the (last & unused) element
-                self.pop_back_unused(); // pop not-anymore-guarded unused elements
+                remap(Id::from_index(last_used_element_index), Id::from_index(unused_index));
 
-                remap(self, Id::from_index(last_used_element_index), Id::from_index(unused_index));
+                // pop the (last, unused) element
+                unused_indices.remove(&unused_index); // must be updated to avoid popping already swapped elements
+                self.elements.pop();
+
+                // pop all previously guarded unused elements
+                while unused_indices.remove(&(self.elements.len() - 1)) {
+                    self.elements.pop();
+                }
             }
         }
 
-        self.debug_assert_last_element_is_used();
         self.shrink_to_fit();
     }
 
@@ -977,6 +983,40 @@ mod test {
             assert_eq!(drain_size, (4, Some(4)));
         }
 
+    }
+
+
+
+    #[test]
+    pub fn test_packing(){
+        let mut map = id_map!(0,1,2,3,4,5,6);
+        assert_eq!(map.elements.len(), 7);
+        assert!(map.contains_element(&2));
+        assert!(map.contains_element(&3));
+        assert!(map.is_packed());
+
+        map.remove(Id::from_index(1));
+        map.remove(Id::from_index(2));
+        map.remove(Id::from_index(4));
+
+        assert_eq!(map.len(), 4);
+        assert_eq!(map.elements.len(), 7);
+        assert!(!map.contains_element(&2));
+        assert!(map.contains_element(&3));
+        assert!(!map.is_packed());
+
+        map.pack(|old_id, new_id| {
+            assert!([4, 5, 6].contains(&old_id.index_value())); // popped element indices
+            assert!([1, 2, 4].contains(&new_id.index_value())); // previously empty slots
+        });
+
+        assert!(!map.contains_element(&2));
+        assert!(map.contains_element(&0));
+        assert!(map.contains_element(&3));
+
+        assert!(map.is_packed());
+        assert_eq!(map.len(), 4);
+        assert_eq!(map.elements.len(), 4);
     }
 
 
