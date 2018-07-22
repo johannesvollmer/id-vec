@@ -36,7 +36,7 @@ simply add this line to your `Cargo.toml` dependencies:
 
 ```toml
 [dependencies]
-id-map = { git = "https://github.com/johannesvollmer/id-map" }
+id-map = { git = "https://github.com/johannesvollmer/id-vec" }
 ```
 
 ## Motivation 
