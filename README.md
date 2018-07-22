@@ -85,7 +85,8 @@ This project has two core structs: the map itself, and the id.
 The id is just a newtype wrapping and index, but it has a type parameter
 to improve type safety for indices. The map internally is a vector, 
 but it reuses deleted slots. It does so by storing the indices 
-of deleted elements in a hash set, which is fast for insertion of new elements 
+of deleted elements in a hash set, which is memory-efficient for 
+largely filled maps, and fast for insertion of new elements,
 but may be not as fast as BitVec for indexing. 
 
 
