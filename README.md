@@ -31,12 +31,12 @@ The user must take care to not use ids that have been deleted.
 
 ## Including this library
 
-To add this library to your project, 
+To add this crate to your project, 
 simply add this line to your `Cargo.toml` dependencies:
 
 ```toml
 [dependencies]
-id-map = { git = "https://github.com/johannesvollmer/id-vec" }
+id-vec = "0.5.0"
 ```
 
 ## Motivation 
