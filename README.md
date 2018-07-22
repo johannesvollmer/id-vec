@@ -71,7 +71,7 @@ connected graph nodes.__
 
 -   This library is a different implementation, 
     and thus may have better runtime performance for special use cases
--   Indexing is done using a type-safe Id 
+-   Indexing is done using a type-safe `Id<T>` 
     instead of a plain, less safe `usize`.
     (Also, using a `usize` falsely suggests some sort of linear ordering, 
     like in a regular Vec)
