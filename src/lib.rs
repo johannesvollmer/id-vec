@@ -4,6 +4,7 @@
 #[macro_use]
 pub mod vec;
 pub mod id;
+pub mod element_marker;
 
 pub use vec::IdVec;
 pub use id::Id;
