@@ -1,6 +1,6 @@
 
 use ::std::collections::HashSet;
-use ::element_marker::ElementMarker;
+use ::element_marker::*;
 use ::id::*;
 
 
@@ -18,7 +18,7 @@ macro_rules! id_vec {
 /// The IdVec does not actively try to preserve order of inserted elements,
 /// but a packed IdVec will append elements to the end of the internal vector.
 #[derive(Clone, Default)] // manual impl: Eq, PartialEq
-pub struct IdVec<T, M: ElementMarker> {
+pub struct IdVec<T, M: ElementMarker = HashSetElementMarker> {
     /// Packed dense vector, containing alive and dead elements.
     /// Because removing the last element directly can be done efficiently,
     /// it is guaranteed that the last element is never unused.
@@ -821,7 +821,7 @@ mod test {
     pub fn test_into_iterator(){
         let map = IdVec {
             elements: vec![0, 2, 3, 4],
-            unused_indices: HashSet::new(),
+            element_marker: HashSetElementMarker::new(),
         };
 
         assert_eq!(
