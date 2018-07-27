@@ -1061,6 +1061,12 @@ mod test {
 
     }
 
+    #[test]
+    pub fn test_default(){
+        let map: IdVec<f32> = IdVec::default();
+        assert!(map.is_empty());
+        assert_eq!(map.elements.capacity(), 0);
+    }
 
 
     #[test]
