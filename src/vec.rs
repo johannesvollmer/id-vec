@@ -4,6 +4,7 @@ use ::id::*;
 
 
 /// Create a new id_vec by entering a series of values
+#[macro_export]
 macro_rules! id_vec {
     ( $($element:expr),* ) => {
         IdVec::from_vec(vec![ $($element),* ])
