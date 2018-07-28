@@ -16,7 +16,7 @@ macro_rules! id_vec {
 ///
 /// The IdVec does not actively try to preserve order of inserted elements,
 /// but a packed IdVec will append elements to the end of the internal vector.
-#[derive(Clone)] // manual impl: Eq, PartialEq
+#[derive(Clone, Default)] // manual impl: Eq, PartialEq
 pub struct IdVec<T> {
     /// Packed dense vector, containing alive and dead elements.
     /// Because removing the last element directly can be done efficiently,
@@ -417,12 +417,6 @@ impl<T> PartialEq for IdVec<T> where T: PartialEq {
             .all(|((id_a, element_a), (id_b, element_b))| {
                 id_a == id_b && element_a == element_b
             })
-    }
-}
-
-impl<T> Default for IdVec<T> {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
