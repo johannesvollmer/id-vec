@@ -18,7 +18,7 @@ let id_world: Id<&str> = words.insert("world");
 println!("{:?} -> {:?}", id_hello, words.get(id_hello));
 
 ```
-
+For more examples, see [`lib.rs`](https://github.com/johannesvollmer/id-vec/blob/master/src/lib.rs).
 
 You can think of the IdVec as a vector that 
 reuses slots. It inserts new elements into 
