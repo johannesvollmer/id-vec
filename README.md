@@ -13,7 +13,7 @@ type-safe Index to that new element.
 let mut words = IdVec::new();
 
 let id_hello: Id<&str> = words.insert("hello");
-let id_world: Id<&str> = words.insert("world");
+let id_world = words.insert("world");
 
 println!("{:?} -> {:?}", id_hello, words.get(id_hello));
 
