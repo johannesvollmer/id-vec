@@ -443,12 +443,12 @@ impl<T> Debug for IdVec<T> where T: Debug {
 
 fn iter_next(
     inclusive_front_index: &mut Index,
-    exclusive_back_index: &mut Index,
+    exclusive_back_index: &Index,
     unused_ids: &HashSet<Index>
 ) -> Option<Index>
 {
     // skip unused elements
-    while inclusive_front_index < exclusive_back_index &&
+    while *inclusive_front_index < *exclusive_back_index &&
         unused_ids.contains(inclusive_front_index)
     {
         *inclusive_front_index += 1;
@@ -464,7 +464,7 @@ fn iter_next(
 }
 
 fn iter_next_back(
-    inclusive_front_index: &mut Index,
+    inclusive_front_index: &Index,
     exclusive_back_index: &mut Index,
     unused_ids: &HashSet<Index>
 ) -> Option<Index>
@@ -502,7 +502,7 @@ impl<'s, T: 's> Iterator for Iter<'s, T> {
     fn next(&mut self) -> Option<Self::Item> {
         iter_next(
             &mut self.inclusive_front_index,
-            &mut self.exclusive_back_index,
+            &self.exclusive_back_index,
             &self.storage.unused_indices
         ).map(|index|{
             let id = Id::from_index(index);
@@ -521,7 +521,7 @@ impl<'s, T: 's> Iterator for Iter<'s, T> {
 impl<'s, T: 's> DoubleEndedIterator for Iter<'s, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
         iter_next_back(
-            &mut self.inclusive_front_index,
+            &self.inclusive_front_index,
             &mut self.exclusive_back_index,
             &self.storage.unused_indices
         ).map(|index|{
@@ -676,7 +676,7 @@ impl<T> Iterator for OwnedIdIter<T> {
     fn next(&mut self) -> Option<Id<T>> {
         iter_next(
             &mut self.inclusive_front_index,
-            &mut self.exclusive_back_index,
+            &self.exclusive_back_index,
             &self.unused_ids
         ).map(|index|
             Id::from_index(index)
@@ -694,7 +694,7 @@ impl<T> Iterator for OwnedIdIter<T> {
 impl<T> DoubleEndedIterator for OwnedIdIter<T> {
     fn next_back(&mut self) -> Option<<Self as Iterator>::Item> {
         iter_next_back(
-            &mut self.inclusive_front_index,
+            &self.inclusive_front_index,
             &mut self.exclusive_back_index,
             &self.unused_ids
         ).map(|index|
