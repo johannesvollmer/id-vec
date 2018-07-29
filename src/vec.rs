@@ -251,7 +251,6 @@ impl<T> IdVec<T> {
     /// Make this map have a continuous flow of indices, having no wasted allocation
     /// and calling remap(old_id, new_id) for every element that has been moved to a new Id
     /// It does not preserve order of the inserted items.
-    // #[must_use]
     pub fn pack<F>(&mut self, remap: F) where F: Fn(Id<T>, Id<T>) {
         let mut unused_indices = ::std::mem::replace(
             &mut self.unused_indices,
@@ -558,7 +557,6 @@ impl<'s, T: 's> DoubleEndedIterator for ElementIter<'s, T> {
 
 /// Note: always iterates backwards, because it just calls IdMap.pop()
 pub struct IntoElements<T> {
-    //map: IdMap<T>, // map.unused_ids will be updated to allow len() and speed up remaining lookups
     iter: ::std::vec::IntoIter<T>,
     unused_ids: HashSet<Index>,
     exclusive_max_index: Index,
@@ -858,7 +856,10 @@ mod test {
         map.remove(zero);
         map.remove(two);
 
-        assert_eq!(map.into_iter().collect::<Vec<_>>(), vec![3, 4], "into_iter containing only non-removed elements")
+        assert_eq!(
+            map.into_iter().collect::<Vec<_>>(), vec![3, 4],
+            "into_iter containing only non-removed elements"
+        )
     }
 
     #[test]
@@ -970,6 +971,7 @@ mod test {
     pub fn test_eq(){
         let mut map1 = id_vec!(0,2,2,4,4);
         let mut map2 = id_vec!(1,2,3,4,5);
+        assert_ne!(map1, map2);
 
         map1.remove(Id::from_index(0));
         map1.remove(Id::from_index(2));
