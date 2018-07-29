@@ -64,7 +64,7 @@ and not any unsigned number as index for a vector.
 
 
 __This library provides a container built specifically for that use case of
-connected graph nodes.__
+connected graph nodes, without using any unsafe rust__
 
 
 ## Why not use [Slab](https://github.com/carllerche/slab)?
