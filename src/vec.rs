@@ -239,7 +239,7 @@ impl<T> IdVec<T> {
         for index in 0..self.elements.len() {
             let id = Id::from_index(index);
             if !self.unused_indices.contains(&index)
-                && predicate(id, &self.elements[index])
+                && !predicate(id, &self.elements[index])
             {
                 self.unused_indices.insert(index);
             }
@@ -1024,10 +1024,10 @@ mod test {
     pub fn test_retain(){
         let mut map = id_vec!(1,2,3,4,5,6);
         map.retain(|_id, elem| {
-            elem % 2 == 0
+            elem % 2 == 0 // keep even elements
         });
 
-        assert_eq!(map.elements().collect::<Vec<_>>(), vec![&1, &3, &5]);
+        assert_eq!(map.elements().collect::<Vec<_>>(), vec![&2, &4, &6]);
     }
 
 
