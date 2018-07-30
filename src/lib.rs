@@ -9,6 +9,9 @@ pub mod element_marker;
 pub use vec::IdVec;
 pub use id::Id;
 
+#[cfg(feature = "bit-vec-marker")]
+extern crate bit_vec;
+
 #[cfg(test)]
 mod examples {
     use super::*;

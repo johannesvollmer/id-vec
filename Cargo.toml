@@ -24,5 +24,10 @@ proc-macro = false
 # built manages the test runner itself.
 harness = true
 
+
+[features]
+bit-vec-marker = ["bit-vec"]
+
 [dependencies]
 # num-traits = "0.2"
+bit-vec = { version = "*", optional = true }
