@@ -177,7 +177,6 @@ impl<T, M: ElementMarker> IdVec<T, M> {
 
         } else {
             while !self.elements.is_empty() // prevent overflow at len() - 1
-//                && self.unused_indices.remove(&(self.elements.len() - 1))
                 && self.element_marker.mark_element_used(self.elements.len() - 1, true)
             {
                 self.elements.pop(); // pop the index that has just been removed from the unused-set
@@ -268,7 +267,6 @@ impl<T, M: ElementMarker> IdVec<T, M> {
     /// Make this map have a continuous flow of indices, having no wasted allocation
     /// and calling remap(old_id, new_id) for every element that has been moved to a new Id
     /// It does not preserve order of the inserted items.
-    // #[must_use]
     pub fn pack<F>(&mut self, remap: F) where F: Fn(Id<T>, Id<T>) {
         let mut element_marker = ::std::mem::replace(
             &mut self.element_marker,
@@ -286,11 +284,9 @@ impl<T, M: ElementMarker> IdVec<T, M> {
 
                 // pop the (last, unused) element
                 element_marker.mark_element_used(unused_index, true); // must be updated to avoid popping already swapped elements
-//                unused_indices.remove(&unused_index);
                 self.elements.pop();
 
                 // pop all previously guarded unused elements
-                // while unused_indices.remove(&(self.elements.len() - 1)) {
                 while element_marker.mark_element_used(self.elements.len() - 1, true){
                     self.elements.pop();
                 }
@@ -614,7 +610,6 @@ impl<'s, T: 's, M: ElementMarker> DoubleEndedIterator for ElementIter<'s, T, M> 
 
 /// Note: always iterates backwards, because it just calls IdMap.pop()
 pub struct IntoElements<T, M: ElementMarker> {
-    //map: IdMap<T>, // map.unused_ids will be updated to allow len() and speed up remaining lookups
     iter: ::std::vec::IntoIter<T>,
     unused_ids: M,
     exclusive_max_index: Index,
