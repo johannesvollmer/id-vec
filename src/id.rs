@@ -17,14 +17,28 @@ impl<T> Id<T> {
 
     /// Convenience function which allows writing the index first, and the IdVec afterwards.
     /// Example: `the_selected_entity.of(entities)`
+    /// Panics when calling on an invalid id
     pub fn of<'s>(self, vec: &'s IdVec<T>) -> &'s T {
         &vec[self]
     }
 
     /// Convenience function which allows writing the index first, and the IdVec afterwards.
     /// Example: `the_selected_entity.of_mut(entities)`
+    /// Panics when calling on an invalid id
     pub fn of_mut<'s>(self, vec: &'s mut IdVec<T>) -> &'s mut T {
         &mut vec[self]
+    }
+
+    /// Convenience function which allows writing the index first, and the IdVec afterwards.
+    /// Example: `the_selected_entity.try_of(entities)`
+    pub fn try_of<'s>(self, vec: &'s IdVec<T>) -> Option<&'s T> {
+        vec.get(self)
+    }
+
+    /// Convenience function which allows writing the index first, and the IdVec afterwards.
+    /// Example: `the_selected_entity.try_of_mut(entities)`
+    pub fn try_of_mut<'s>(self, vec: &'s mut IdVec<T>) -> Option<&'s mut T> {
+        vec.get_mut(self)
     }
 
     /// The actual integer value for this Id.
