@@ -7,10 +7,18 @@ use ::id::*;
 /// Create a new id_vec by entering a series of values
 macro_rules! id_vec {
     ( $($element:expr),* ) => {
-        IdVec::from_vec(vec![ $($element),* ])
+        {
+            use ::vec::{ IdVec, DefaultElementMarker };
+            let result: IdVec<_, DefaultElementMarker> = // let only used for type inference, failing on T otherwise
+                IdVec::from_vec(vec![ $($element),* ]);
+
+            result
+        }
     };
 }
 
+
+pub type DefaultElementMarker = HashSetElementMarker;
 
 /// Inserting elements into this map yields a persistent, type-safe Index to that new element.
 /// It does not try to preserve the order of the inserted items.
@@ -18,7 +26,7 @@ macro_rules! id_vec {
 /// The IdVec does not actively try to preserve order of inserted elements,
 /// but a packed IdVec will append elements to the end of the internal vector.
 #[derive(Clone, Default)] // manual impl: Eq, PartialEq
-pub struct IdVec<T, M: ElementMarker = HashSetElementMarker> {
+pub struct IdVec<T, M: ElementMarker = DefaultElementMarker> {
     /// Packed dense vector, containing alive and dead elements.
     /// Because removing the last element directly can be done efficiently,
     /// it is guaranteed that the last element is never unused.
@@ -26,7 +34,7 @@ pub struct IdVec<T, M: ElementMarker = HashSetElementMarker> {
 
     /// Contains all unused ids which are allowed to be overwritten,
     /// will never contain the last ID, because the last id can be removed directly
-    element_marker: HashSet<Index>, // TODO if iteration is too slow, use both Vec<NextUnusedIndex> and BitVec
+    element_marker: M,
 }
 
 
@@ -35,20 +43,22 @@ pub struct IdVec<T, M: ElementMarker = HashSetElementMarker> {
 impl<T, M: ElementMarker> IdVec<T, M> {
 
     /// Does not allocate heap memory
-    pub fn new() -> Self {
-        Self::with_capacity(0)
+    pub fn with_marker(marker: M) -> Self {
+        Self::with_marker_and_capacity(marker, 0)
     }
 
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self::from(Vec::with_capacity(capacity))
+    pub fn with_marker_and_capacity(marker: M, capacity: usize) -> Self {
+        Self::from_vec_with_marker(
+            marker, Vec::with_capacity(capacity)
+        )
     }
 
     /// Create a map containing these elements.
     /// Directly uses the specified vector,
     /// so no allocation is made calling this function.
-    pub fn from_vec(elements: Vec<T>) -> Self {
+    pub fn from_vec_with_marker(marker: M, elements: Vec<T>) -> Self {
         IdVec {
-            element_marker: M::with_element_capacity(elements.len()),
+            element_marker: marker,
             elements,
         }
     }
@@ -59,7 +69,7 @@ impl<T, M: ElementMarker> IdVec<T, M> {
     /// Returns if this id is not deleted (does not check if index is inside vector range)
     fn index_is_currently_used(&self, index: Index) -> bool {
         index + 1 == self.elements.len() || // fast return for last element is always used
-            self.element_marker.element_is_used(&index)
+            self.element_marker.element_is_used(index)
     }
 
     fn index_is_in_range(&self, index: Index) -> bool {
@@ -180,7 +190,7 @@ impl<T, M: ElementMarker> IdVec<T, M> {
     /// This may overwrite (thus drop) unused elements.
     pub fn insert(&mut self, element: T) -> Id<T> {
         let id = Id::from_index({
-            if let Some(previously_unused_index) = self.element_marker.next_unused_element().map(|i| *i) {
+            if let Some(previously_unused_index) = self.element_marker.unused_elements().next() {
                 self.debug_assert_id_validity(Id::from_index(previously_unused_index), false);
                 self.element_marker.mark_element_used(previously_unused_index, true);
                 self.elements[previously_unused_index] = element;
@@ -244,7 +254,7 @@ impl<T, M: ElementMarker> IdVec<T, M> {
     pub fn retain<F>(&mut self, predicate: F) where F: Fn(Id<T>, &T) -> bool {
         for index in 0..self.elements.len() {
             let id = Id::from_index(index);
-            if self.element_marker.element_is_used(&index)
+            if self.element_marker.element_is_used(index)
                 && predicate(id, &self.elements[index])
             {
                 self.element_marker.mark_element_used(index, false);
@@ -264,7 +274,7 @@ impl<T, M: ElementMarker> IdVec<T, M> {
             M::default() // does probably not allocate
         );
 
-        while let Some(&unused_index) = element_marker.unused_elements().next() {
+        while let Some(unused_index) = element_marker.unused_elements().next() {
             // unused_index may have already been removed in a previous iteration at pop_back_unused, so check for:
             if unused_index < self.elements.len() {
                 let last_used_element_index = self.elements.len() - 1;
@@ -297,7 +307,8 @@ impl<T, M: ElementMarker> IdVec<T, M> {
         Iter {
             inclusive_front_index: 0,
             exclusive_back_index: self.elements.len(),
-            storage: self
+            storage: self,
+            _m: Default::default(),
         }
     }
 
@@ -307,7 +318,7 @@ impl<T, M: ElementMarker> IdVec<T, M> {
     pub fn into_elements(self) -> IntoElements<T, M> {
         IntoElements {
             exclusive_max_index: self.elements.len(),
-            unused_ids: self.unused_indices,
+            unused_ids: self.element_marker,
             iter: self.elements.into_iter(),
             next_index: 0,
         }
@@ -316,7 +327,7 @@ impl<T, M: ElementMarker> IdVec<T, M> {
     pub fn drain_elements(&mut self) -> DrainElements<T, M> {
         DrainElements {
             exclusive_max_index: self.elements.len(),
-            unused_ids: &mut self.unused_indices,
+            unused_ids: &mut self.element_marker,
             iter: self.elements.drain(..),
             next_index: 0,
         }
@@ -324,7 +335,10 @@ impl<T, M: ElementMarker> IdVec<T, M> {
 
     /// Used for immutable direct access to all used elements
     pub fn elements<'s>(&'s self) -> ElementIter<'s, T, M> {
-        ElementIter { iter: self.iter() }
+        ElementIter {
+            iter: self.iter(),
+            _m: Default::default(),
+        }
     }
 
     /// Used for immutable indirect access
@@ -340,7 +354,7 @@ impl<T, M: ElementMarker> IdVec<T, M> {
         OwnedIdIter {
             inclusive_front_index: 0,
             exclusive_back_index: self.elements.len(),
-            unused_ids: self.unused_indices.clone(), // TODO without clone // TODO try copy-on-write?
+            unused_ids: self.element_marker.clone(), // TODO without clone // TODO try copy-on-write?
             marker: ::std::marker::PhantomData,
         }
     }
@@ -378,8 +392,33 @@ impl<T, M: ElementMarker> IdVec<T, M> {
 }
 
 
+// implement instantiation functions only with concrete type parameter,
+// because the default parameter cannot be inferred otherwise (????)
+// (see HashMap<_,_, RandomState> implementation)
+impl<T> IdVec<T, DefaultElementMarker> {
+    /// Does not allocate heap memory
+    pub fn new() -> Self {
+        Self::with_capacity(0)
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self::from_vec(Vec::with_capacity(capacity))
+    }
+
+    /// Create a map containing these elements.
+    /// Directly uses the specified vector,
+    /// so no allocation is made calling this function.
+    pub fn from_vec(elements: Vec<T>) -> Self {
+        Self::from_vec_with_marker(
+            DefaultElementMarker::with_element_capacity(elements.len()),
+            elements
+        )
+    }
+}
+
+
 // enable using .collect() on an iterator to construct self
-impl<T, M: ElementMarker> ::std::iter::FromIterator<T> for IdVec<T, M> {
+impl<T> ::std::iter::FromIterator<T> for IdVec<T, DefaultElementMarker> {
     fn from_iter<I: IntoIterator<Item=T>>(iter: I) -> Self {
         IdVec::from_vec(iter.into_iter().collect())
     }
@@ -394,7 +433,7 @@ impl<T, M: ElementMarker> ::std::iter::IntoIterator for IdVec<T, M> {
     }
 }
 
-impl<T, M: ElementMarker> From<Vec<T>> for IdVec<T, M> {
+impl<T> From<Vec<T>> for IdVec<T, DefaultElementMarker> {
     fn from(vec: Vec<T>) -> Self {
         IdVec::from_vec(vec)
     }
@@ -422,7 +461,8 @@ impl<T, M: ElementMarker> ::std::ops::IndexMut<Id<T>> for IdVec<T, M> {
 /// Complexity of O(n)
 ///
 // FIXME cannot compare to an idvec with a different element_marker???
-impl<T, M: ElementMarker, MO: ElementMarker> Eq for IdVec<T, M> where T: Eq {}
+impl<T, M: ElementMarker> Eq for IdVec<T, M> where T: Eq {}
+
 impl<T, M: ElementMarker> PartialEq for IdVec<T, M> where T: PartialEq {
     fn eq(&self, other: &Self) -> bool {
         self.len() == other.len() && self.iter()
@@ -454,15 +494,15 @@ impl<T, M: ElementMarker> Debug for IdVec<T, M> where T: Debug {
 // TODO all iterators can be ExactSizeIterators if they count how many deleted objects they have passed
 
 
-fn iter_next(
+fn iter_next<M: ElementMarker>(
     inclusive_front_index: &mut Index,
     exclusive_back_index: &mut Index,
-    unused_ids: &HashSet<Index>
+    unused_ids: &M
 ) -> Option<Index>
 {
     // skip unused elements
     while inclusive_front_index < exclusive_back_index &&
-        unused_ids.contains(inclusive_front_index)
+        !unused_ids.element_is_used(*inclusive_front_index)
     {
         *inclusive_front_index += 1;
     }
@@ -476,15 +516,15 @@ fn iter_next(
     } else { None }
 }
 
-fn iter_next_back(
+fn iter_next_back<M: ElementMarker>(
     inclusive_front_index: &mut Index,
     exclusive_back_index: &mut Index,
-    unused_ids: &HashSet<Index>
+    unused_ids: &M
 ) -> Option<Index>
 {
     // skip unused elements
     while *exclusive_back_index > *inclusive_front_index
-        && unused_ids.contains(&(*exclusive_back_index - 1))
+        && !unused_ids.element_is_used(*exclusive_back_index - 1)
     {
         *exclusive_back_index -= 1;
     }
@@ -503,10 +543,11 @@ fn iter_next_back(
 
 
 
-pub struct Iter<'s, T: 's, M: ElementMarker> {
+pub struct Iter<'s, T: 's, M: 's + ElementMarker> {
     inclusive_front_index: Index,
     exclusive_back_index: Index,
     storage: &'s IdVec<T, M>,
+    _m: ::std::marker::PhantomData<M>,
 }
 
 impl<'s, T: 's, M: ElementMarker> Iterator for Iter<'s, T, M> {
@@ -516,7 +557,7 @@ impl<'s, T: 's, M: ElementMarker> Iterator for Iter<'s, T, M> {
         iter_next(
             &mut self.inclusive_front_index,
             &mut self.exclusive_back_index,
-            &self.storage.unused_indices
+            &self.storage.element_marker
         ).map(|index|{
             let id = Id::from_index(index);
             (id, &self.storage[id])
@@ -525,7 +566,7 @@ impl<'s, T: 's, M: ElementMarker> Iterator for Iter<'s, T, M> {
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         let max_remaining = self.exclusive_back_index - self.inclusive_front_index;
-        let unused_elements = self.storage.unused_indices.len();
+        let unused_elements = self.storage.element_marker.unused_element_count();
         let min_remaining = max_remaining.checked_sub(unused_elements).unwrap_or(0);
         (min_remaining, Some(max_remaining))
     }
@@ -536,7 +577,7 @@ impl<'s, T: 's, M: ElementMarker> DoubleEndedIterator for Iter<'s, T, M> {
         iter_next_back(
             &mut self.inclusive_front_index,
             &mut self.exclusive_back_index,
-            &self.storage.unused_indices
+            &self.storage.element_marker
         ).map(|index|{
             let id = Id::from_index(index);
             (id, &self.storage[id])
@@ -546,8 +587,9 @@ impl<'s, T: 's, M: ElementMarker> DoubleEndedIterator for Iter<'s, T, M> {
 
 
 
-pub struct ElementIter<'s, T: 's, M: ElementMarker> {
+pub struct ElementIter<'s, T: 's, M: 's + ElementMarker> {
     iter: Iter<'s, T, M>,
+    _m: ::std::marker::PhantomData<M>,
 }
 
 impl<'s, T: 's, M: ElementMarker> Iterator for ElementIter<'s, T, M> {
@@ -583,7 +625,7 @@ impl<T, M: ElementMarker> Iterator for IntoElements<T, M> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while self.unused_ids.remove(&self.next_index) {
+        while self.unused_ids.mark_element_used(self.next_index, true) {
             self.next_index += 1;
             self.iter.next().unwrap(); // skip deleted element
         }
@@ -599,16 +641,15 @@ impl<T, M: ElementMarker> Iterator for IntoElements<T, M> {
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         let elements = self.exclusive_max_index - self.next_index;
-        let used = elements - self.unused_ids.len(); // self.unused_ids is updated on self.next()
+        let used = elements - self.unused_ids.unused_element_count(); // self.unused_ids is updated on self.next()
         (used, Some(used))
     }
 }
 
 
-/// Note: always iterates backwards, because it just calls IdMap.pop()
-pub struct DrainElements<'s, T: 's, M: ElementMarker> {
+pub struct DrainElements<'s, T: 's, M: 's + ElementMarker> {
     iter: ::std::vec::Drain<'s, T>,
-    unused_ids: &'s M,
+    unused_ids: &'s mut M,
     exclusive_max_index: Index,
     next_index: Index,
 }
@@ -618,7 +659,7 @@ impl<'s, T: 's, M: ElementMarker> Iterator for DrainElements<'s, T, M> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while self.unused_ids.remove(&self.next_index) {
+        while self.unused_ids.mark_element_used(self.next_index, true) {
             self.next_index += 1;
             self.iter.next().unwrap(); // skip deleted element
         }
@@ -634,7 +675,7 @@ impl<'s, T: 's, M: ElementMarker> Iterator for DrainElements<'s, T, M> {
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         let elements = self.exclusive_max_index - self.next_index;
-        let used = elements - self.unused_ids.len(); // self.unused_ids is updated on self.next()
+        let used = elements - self.unused_ids.unused_element_count(); // self.unused_ids is updated on self.next()
         (used, Some(used))
     }
 }
@@ -649,7 +690,7 @@ impl<'s, T: 's, M: ElementMarker> Drop for DrainElements<'s, T, M> {
 
 
 
-pub struct IdIter<'s, T: 's, M: ElementMarker> {
+pub struct IdIter<'s, T: 's, M: 's + ElementMarker> {
     iter: Iter<'s, T, M>,
 }
 
@@ -698,7 +739,7 @@ impl<T, M: ElementMarker> Iterator for OwnedIdIter<T, M> {
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         let max_remaining = self.exclusive_back_index - self.inclusive_front_index;
-        let unused_elements = self.unused_ids.len();
+        let unused_elements = self.unused_ids.unused_element_count();
         let min_remaining = max_remaining.checked_sub(unused_elements).unwrap_or(0);
         (min_remaining, Some(max_remaining))
     }
@@ -821,7 +862,7 @@ mod test {
     pub fn test_into_iterator(){
         let map = IdVec {
             elements: vec![0, 2, 3, 4],
-            element_marker: HashSetElementMarker::new(),
+            element_marker: DefaultElementMarker::default(),
         };
 
         assert_eq!(

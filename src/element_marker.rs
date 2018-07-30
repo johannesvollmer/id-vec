@@ -2,18 +2,25 @@ use ::std::collections::HashSet;
 use ::id::Index;
 
 
-/// used to test whether a specific element is deleted or used
+/// Used to test whether a specific element is deleted or used
 pub trait ElementMarker : Default {
     fn with_element_capacity(size: usize) -> Self;
 
-    /// returns if the old value was used
+    /// Returns if the old value was used
     fn mark_element_used(&mut self, index: Index, used: bool) -> bool;
+
+    /// Return true if the element is alive, false if it was deleted
     fn element_is_used(&self, index: Index) -> bool;
 
-    type UnusedElementIter<'s>: ExactSizeIterator + Iterator<Item = &'s Index>; // TODO fix lifetime issues differently?
-    fn unused_elements(&self) -> Self::UnusedElementIter;
 
-    fn reserve_elements(&mut self);
+    /// Return Self::UnusedElementIter to iterate over all unused elements in this marker
+    fn unused_elements(&self) -> Self::UnusedElementIter; // TODO use associated lifetime
+    type UnusedElementIter: Sized + Iterator<Item = Index>; // TODO use associated lifetime
+
+    fn unused_element_count(&self) -> usize;
+
+    /// reserve space for _used_ elements in the id-vec
+    fn reserve_elements(&mut self, new_element_count: usize);
     fn shrink_to_fit(&mut self);
     fn clear(&mut self);
 }
@@ -47,13 +54,22 @@ impl ElementMarker for HashSetElementMarker {
         !self.unused_indices.contains(&index)
     }
 
-    type UnusedElementIter<'s> = ::std::collections::hash_set::Iter<'s, usize>;
 
     fn unused_elements(&self) -> Self::UnusedElementIter {
-        self.unused_indices.iter()
+        // TODO this 'owning' iterator should borrow, as soon as 'lifetimes in associated types' becomes stable
+        ClonedHashSetMarkerIter {
+            into_iter: self.unused_indices.clone().into_iter()
+        }
     }
 
-    fn reserve_elements(&mut self) {
+    // TODO this 'owning' iterator should borrow, as soon as 'lifetimes in associated types' becomes stable
+    type UnusedElementIter = ClonedHashSetMarkerIter;
+
+    fn unused_element_count(&self) -> usize {
+        self.unused_indices.len()
+    }
+
+    fn reserve_elements(&mut self, _element_count: usize) {
         // does not depend on element count, but on unused-element-count
     }
 
@@ -65,3 +81,25 @@ impl ElementMarker for HashSetElementMarker {
         self.unused_indices.clear();
     }
 }
+
+pub struct ClonedHashSetMarkerIter {
+    /// TODO this 'owning' iterator should borrow, as soon as 'lifetimes in associated types' becomes stable
+    into_iter: ::std::collections::hash_set::IntoIter<Index>,
+}
+
+impl ExactSizeIterator for ClonedHashSetMarkerIter {
+    /* hash_set.into_iter implements ExactSizeIterator */
+}
+
+impl Iterator for ClonedHashSetMarkerIter {
+    type Item = Index;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.into_iter.next()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.into_iter.size_hint()
+    }
+}
+
