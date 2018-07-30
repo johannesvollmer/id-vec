@@ -99,7 +99,8 @@ impl<T, M: ElementMarker> IdVec<T, M> {
     pub fn len(&self) -> usize {
         debug_assert!(
             self.elements.len() >= self.element_marker.unused_element_count(),
-            "More ids are unused than exist"
+            "More ids are unused than exist (all elements: {}, deleted elements: {})",
+            self.elements.len(), self.element_marker.unused_element_count()
         );
 
         self.elements.len() - self.element_marker.unused_element_count()
@@ -177,7 +178,7 @@ impl<T, M: ElementMarker> IdVec<T, M> {
         } else {
             while !self.elements.is_empty() // prevent overflow at len() - 1
 //                && self.unused_indices.remove(&(self.elements.len() - 1))
-                && self.element_marker.mark_element_used(self.elements.len() - 1, false)
+                && self.element_marker.mark_element_used(self.elements.len() - 1, true)
             {
                 self.elements.pop(); // pop the index that has just been removed from the unused-set
             }
@@ -290,7 +291,7 @@ impl<T, M: ElementMarker> IdVec<T, M> {
 
                 // pop all previously guarded unused elements
                 // while unused_indices.remove(&(self.elements.len() - 1)) {
-                while element_marker.mark_element_used(self.elements.len() - 1, false){
+                while element_marker.mark_element_used(self.elements.len() - 1, true){
                     self.elements.pop();
                 }
             }
