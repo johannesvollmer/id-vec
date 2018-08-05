@@ -251,7 +251,7 @@ impl<T> IdVec<T> {
     /// Make this map have a continuous flow of indices, having no wasted allocation
     /// and calling remap(old_id, new_id) for every element that has been moved to a new Id
     /// It does not preserve order of the inserted items.
-    pub fn pack<F>(&mut self, remap: F) where F: Fn(Id<T>, Id<T>) {
+    pub fn pack<F>(&mut self, mut remap: F) where F: FnMut(Id<T>, Id<T>) {
         let mut unused_indices = ::std::mem::replace(
             &mut self.unused_indices,
             HashSet::new() // does not allocate
