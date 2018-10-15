@@ -1,6 +1,6 @@
 [package]
 name = "id-vec"
-version = "0.5.6"
+version = "0.5.7"
 authors = ["johannesvollmer <johannes596@t-online.de>"]
 description = "Simplify Graphs in Rust. Introduces IdVec, which automatically creates Ids for each new object, reusing deleted Ids. "
 repository = "https://github.com/johannesvollmer/id-vec"
