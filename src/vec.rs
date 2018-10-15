@@ -25,7 +25,7 @@ pub struct IdVec<T> {
     elements: Vec<T>,
 
     /// Contains all unused ids which are allowed to be overwritten,
-    /// will never contain the last ID, because the last id can be removed directly
+    /// will never contain the last used ID, because the last id can be removed directly
     unused_indices: HashSet<Index>, // TODO if iteration is too slow, use both Vec<NextUnusedIndex> and BitVec
 }
 
@@ -91,10 +91,9 @@ impl<T> IdVec<T> {
         self.elements.len() - self.unused_indices.len()
     }
 
-    /// The length of the inner element vector;
-    /// the sum of the filled element slots and the deleted element slots.
-    /// Used to estimate the maximal `index_value()` of an id inside this IdVec.
-    pub fn slot_count(&self) -> usize {
+    /// Used to estimate the maximal `index_value()` of all ids inside this IdVec.
+    /// This IdVec will not contain an id with an index value greater than or equal to this value.
+    pub fn id_index_limit(&self) -> usize {
         self.elements.len()
     }
 
