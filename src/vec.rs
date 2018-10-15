@@ -45,7 +45,7 @@ impl<T> IdVec<T> {
 
     /// Create a map containing these elements.
     /// Directly uses the specified vector,
-    /// so no allocation is made calling this function.
+    /// so no heap allocation is made calling this function.
     pub fn from_vec(elements: Vec<T>) -> Self {
         IdVec {
             unused_indices: HashSet::new(), // no elements deleted
@@ -89,6 +89,17 @@ impl<T> IdVec<T> {
     pub fn len(&self) -> usize {
         debug_assert!(self.elements.len() >= self.unused_indices.len(), "More ids are unused than exist");
         self.elements.len() - self.unused_indices.len()
+    }
+
+    /// The length of the inner element vector;
+    /// the sum of the filled element slots and the deleted element slots.
+    /// Used to estimate the maximal `index_value()` of an id inside this IdVec.
+    pub fn slot_count(&self) -> usize {
+        self.elements.len()
+    }
+
+    pub fn capacity(&self) -> usize {
+        self.elements.capacity()
     }
 
     pub fn is_empty(&self) -> bool {
