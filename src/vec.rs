@@ -281,8 +281,6 @@ impl<T> IdVec<T> {
     }
 
 
-
-
     /// Used for immutable access to ids and elements
     pub fn iter<'s>(&'s self) -> Iter<'s, T> {
         Iter {
@@ -295,6 +293,7 @@ impl<T> IdVec<T> {
     // pub fn iter_mut<'s>(&'s mut self) -> IterMut cannot be implemented safely
     // because it would require multiple mutable references
 
+    /// Iterate over the elements, consuming this IdVec
     pub fn into_elements(self) -> IntoElements<T> {
         IntoElements {
             exclusive_max_index: self.elements.len(),
@@ -304,6 +303,7 @@ impl<T> IdVec<T> {
         }
     }
 
+    /// Iterate over the elements, clearing this IdVec
     pub fn drain_elements(&mut self) -> DrainElements<T> {
         DrainElements {
             exclusive_max_index: self.elements.len(),
